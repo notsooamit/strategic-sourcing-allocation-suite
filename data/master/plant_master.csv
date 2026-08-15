@@ -1,0 +1,6 @@
+plant_id,plant_name,location,weekly_assembly_capacity_units
+PLANT_01,Detroit Advanced Assembly Hub,Detroit,15000
+PLANT_02,Munich Engineering Works,Munich,12000
+PLANT_03,Monterrey Global Production Hub,Monterrey,20000
+PLANT_04,Tokyo Precision Facility,Tokyo,10000
+PLANT_05,Chennai Industrial Complex,Chennai,18000

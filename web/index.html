@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TitanMfg™ Strategic Sourcing & Multi-Supplier Allocation Platform</title>
+  <meta name="description" content="Industrial enterprise multi-objective MILP raw material sourcing optimization, predictive pre-PO delivery delay modeling, and 5-stage procurement governance.">
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+
+  <!-- ==================================================================== -->
+  <!-- 1. DEDICATED CLEAN ENTERPRISE ROLE-BASED LOGIN / LANDING SCREEN -->
+  <!-- ==================================================================== -->
+  <div id="login-screen" class="login-portal-overlay">
+    <div class="login-portal-wrapper">
+      
+      <!-- Brand Header -->
+      <div class="portal-header text-center">
+        <div class="portal-logo-badge">
+          <i data-lucide="factory" class="portal-logo-icon"></i>
+        </div>
+        <h1 class="portal-title">TitanMfg™ Strategic Sourcing</h1>
+        <p class="portal-subtitle">Industrial Multi-Supplier Allocation & Mathematical Optimization Suite</p>
+        <div class="portal-tagline">
+          <span>Deterministic PuLP MILP Solver</span> • 
+          <span>40 Direct Raw Materials</span> • 
+          <span>12 Global Suppliers</span> • 
+          <span>5 Assembly Hubs</span>
+        </div>
+      </div>
+
+      <!-- Instruction Banner -->
+      <div class="portal-instruction-strip">
+        <i data-lucide="shield-check" class="icon-sm text-cyan"></i>
+        <span>Select your authenticated enterprise persona to access role-specific procurement modules:</span>
+      </div>
+
+      <!-- 4 Role Persona Login Cards Grid -->
+      <div class="persona-cards-grid">
+        
+        <!-- Persona 1: Executive / CPO -->
+        <div class="persona-login-card" data-role="executive" onclick="loginAs('executive')">
+          <div class="persona-card-top">
+            <div class="avatar-wrap bg-cyan-dim">
+              <i data-lucide="briefcase" class="avatar-icon text-cyan"></i>
+            </div>
+            <span class="role-badge badge-cyan">Executive Level</span>
+          </div>
+          <h3 class="persona-name">Robert Sterling</h3>
+          <span class="persona-title">Chief Procurement Officer (CPO)</span>
+          <p class="persona-desc">Executive spend visibility, 12-week landed cost waterfall, vendor concentration (HHI) analytics, and final committee awards.</p>
+          <div class="persona-modules-list">
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Executive Sourcing Cockpit</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Spend Waterfall & HHI Gauge</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> 5-Stage Governance Sign-Off</span>
+          </div>
+          <button class="btn-login-action btn-cyan w-full">
+            <span>Log In as CPO</span>
+            <i data-lucide="arrow-right" class="icon-xs"></i>
+          </button>
+        </div>
+
+        <!-- Persona 2: Sourcing Category Lead -->
+        <div class="persona-login-card featured" data-role="sourcing_lead" onclick="loginAs('sourcing_lead')">
+          <div class="persona-card-top">
+            <div class="avatar-wrap bg-indigo-dim">
+              <i data-lucide="sliders" class="avatar-icon text-indigo"></i>
+            </div>
+            <span class="role-badge badge-indigo">Strategic Lead</span>
+          </div>
+          <h3 class="persona-name">Marcus Vance</h3>
+          <span class="persona-title">Global Category Sourcing Lead</span>
+          <p class="persona-desc">PuLP MILP volume allocation matrix, interactive vendor sliders, real-time MOQ validation, and pre-PO delay risk rebalancing.</p>
+          <div class="persona-modules-list">
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> MILP Allocation Tuning Studio</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Pre-PO Predictive Delay Radar</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> What-If Disruption Simulator</span>
+          </div>
+          <button class="btn-login-action btn-indigo w-full">
+            <span>Log In as Sourcing Lead</span>
+            <i data-lucide="arrow-right" class="icon-xs"></i>
+          </button>
+        </div>
+
+        <!-- Persona 3: Plant Operations Buyer -->
+        <div class="persona-login-card" data-role="plant_buyer" onclick="loginAs('plant_buyer')">
+          <div class="persona-card-top">
+            <div class="avatar-wrap bg-emerald-dim">
+              <i data-lucide="boxes" class="avatar-icon text-emerald"></i>
+            </div>
+            <span class="role-badge badge-emerald">Plant Operations</span>
+          </div>
+          <h3 class="persona-name">David Miller</h3>
+          <span class="persona-title">Plant Materials Operations Buyer</span>
+          <p class="persona-desc">Multi-plant demand aggregation, BOM time-phased netting, inventory coverage ratios, and 1-click PO release to EDI/ERP.</p>
+          <div class="persona-modules-list">
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Demand & MRP BOM Netting</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Inventory Weeks of Supply</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> 1-Click PO Release to EDI</span>
+          </div>
+          <button class="btn-login-action btn-emerald w-full">
+            <span>Log In as Plant Buyer</span>
+            <i data-lucide="arrow-right" class="icon-xs"></i>
+          </button>
+        </div>
+
+        <!-- Persona 4: Supplier Quality Assurance -->
+        <div class="persona-login-card" data-role="quality_lead" onclick="loginAs('quality_lead')">
+          <div class="persona-card-top">
+            <div class="avatar-wrap bg-amber-dim">
+              <i data-lucide="award" class="avatar-icon text-amber"></i>
+            </div>
+            <span class="role-badge badge-amber">Quality Assurance</span>
+          </div>
+          <h3 class="persona-name">Dr. Aris Thorne</h3>
+          <span class="persona-title">Supplier Quality & Compliance Lead</span>
+          <p class="persona-desc">Supplier audit scorecards, OTD vs Defect PPM quadrant matrix, ISO-9001 compliance, and quality ceiling constraints.</p>
+          <div class="persona-modules-list">
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Supplier Performance Matrix</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Defect PPM Ceiling Controls</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Quality Audit Scorecards</span>
+          </div>
+          <button class="btn-login-action btn-amber w-full">
+            <span>Log In as Quality Lead</span>
+            <i data-lucide="arrow-right" class="icon-xs"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div class="portal-footer text-center">
+        <span>Protected by Enterprise Role-Based Access Control (RBAC) • Powered by Coin-OR CBC Linear Programming Engine</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 2. MAIN APPLICATION WORKSPACE (Accessible after Role Login) -->
+  <!-- ==================================================================== -->
+  <div id="app-container" class="app-layout" style="display: none;">
+    
+    <!-- Top Navigation Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="logo-icon-wrap">
+            <i data-lucide="factory" class="icon-brand"></i>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">TitanMfg™ Sourcing</span>
+            <span class="brand-subtitle">Multi-Supplier Allocation & Optimization Suite</span>
+          </div>
+        </div>
+        <div class="system-status-pill">
+          <span class="pulse-dot"></span>
+          <span class="status-text" id="status-engine-text">PuLP MILP Solver Active</span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <!-- Cadence Progress Indicator -->
+        <div class="cycle-banner">
+          <div class="cycle-info">
+            <span class="cycle-label">CADENCE:</span>
+            <strong id="header-cycle-name">Q3 2026 Direct Materials</strong>
+          </div>
+          <div class="cycle-progress-bar-wrap">
+            <div class="cycle-progress-bar" id="header-cycle-progress" style="width: 80%;"></div>
+          </div>
+          <span class="cycle-pct" id="header-cycle-pct">80%</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        
+        <!-- Active Authenticated User Profile Display -->
+        <div class="user-profile-badge" id="active-user-profile">
+          <div class="user-avatar-sm" id="header-user-avatar">
+            <i data-lucide="user" class="icon-xs"></i>
+          </div>
+          <div class="user-details-text">
+            <strong class="user-name" id="header-user-name">Marcus Vance</strong>
+            <span class="user-role-label" id="header-user-role">Strategic Sourcing Lead</span>
+          </div>
+        </div>
+
+        <!-- Collaborative Activity Stream Toggle -->
+        <button id="btn-toggle-activity" class="btn-glass icon-only" title="Toggle Collaborative Activity Stream">
+          <i data-lucide="activity" class="icon-sm"></i>
+          <span class="notification-badge" id="activity-unread-count">2</span>
+        </button>
+
+        <!-- Logout / Return to Portal Button -->
+        <button class="btn-glass btn-logout" onclick="logout()" title="Logout and return to role selection portal">
+          <i data-lucide="log-out" class="icon-sm text-rose"></i>
+          <span>Logout</span>
+        </button>
+
+      </div>
+    </header>
+
+    <!-- Main Workspace Body -->
+    <div class="workspace-body">
+      
+      <!-- Sidebar Navigation (Strictly Filtered by Active Role) -->
+      <aside class="sidebar-nav">
+        <div class="sidebar-nav-top">
+          <div class="nav-section-title">AUTHORIZED WORKFLOWS</div>
+          <ul class="nav-menu" id="sidebar-nav-menu">
+            
+            <!-- View 1: Executive Cockpit (Executive only) -->
+            <li class="nav-item" data-view="view-cockpit" data-roles="executive">
+              <a href="#cockpit" class="nav-link">
+                <i data-lucide="layout-dashboard" class="nav-icon"></i>
+                <span>Executive Cockpit</span>
+              </a>
+            </li>
+
+            <!-- View 2: MILP Allocation Studio (Sourcing Lead only) -->
+            <li class="nav-item" data-view="view-allocation" data-roles="sourcing_lead">
+              <a href="#allocation" class="nav-link">
+                <i data-lucide="sliders" class="nav-icon"></i>
+                <span>MILP Allocation Studio</span>
+              </a>
+            </li>
+
+            <!-- View 3: Pre-PO Delay Radar (Sourcing Lead, Quality Lead) -->
+            <li class="nav-item" data-view="view-delay-radar" data-roles="sourcing_lead,quality_lead">
+              <a href="#delay-radar" class="nav-link">
+                <i data-lucide="radar" class="nav-icon"></i>
+                <span>Pre-PO Delay Radar</span>
+                <span class="badge-alert-count" id="badge-red-delay-count">0</span>
+              </a>
+            </li>
+
+            <!-- View 4: Supplier Scorecards (Quality Lead only) -->
+            <li class="nav-item" data-view="view-scorecards" data-roles="quality_lead">
+              <a href="#scorecards" class="nav-link">
+                <i data-lucide="award" class="nav-icon"></i>
+                <span>Supplier Scorecards</span>
+              </a>
+            </li>
+
+            <!-- View 5: Demand & MRP Netting (Plant Buyer only) -->
+            <li class="nav-item" data-view="view-demand-mrp" data-roles="plant_buyer">
+              <a href="#demand-mrp" class="nav-link">
+                <i data-lucide="boxes" class="nav-icon"></i>
+                <span>Demand & MRP Netting</span>
+              </a>
+            </li>
+
+            <!-- View 6: What-If Simulator (Sourcing Lead, Executive) -->
+            <li class="nav-item" data-view="view-simulator" data-roles="sourcing_lead,executive">
+              <a href="#simulator" class="nav-link">
+                <i data-lucide="cpu" class="nav-icon"></i>
+                <span>What-If Simulator</span>
+              </a>
+            </li>
+
+            <!-- View 7: Governance & Ledger (All Roles) -->
+            <li class="nav-item" data-view="view-governance" data-roles="executive,sourcing_lead,plant_buyer,quality_lead">
+              <a href="#governance" class="nav-link">
+                <i data-lucide="file-check" class="nav-icon"></i>
+                <span>Governance & Ledger</span>
+              </a>
+            </li>
+
+          </ul>
+        </div>
+
+        <!-- Bottom Sidebar Action Button (Visible for authorized roles: Plant Buyer, CPO) -->
+        <div id="sidebar-po-release-btn-wrap" class="sidebar-bottom-actions" style="display: none;">
+          <button id="btn-release-po-modal" class="btn-primary-glow btn-sm w-full">
+            <i data-lucide="send" class="icon-xs"></i> Release POs to EDI
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content View Area -->
+      <main class="content-viewport">
+        
+        <!-- ================================================================ -->
+        <!-- VIEW 1: EXECUTIVE SOURCING COCKPIT -->
+        <!-- ================================================================ -->
+        <section id="view-cockpit" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Executive Sourcing & Allocation Cockpit</h1>
+              <p class="view-desc">High-level enterprise visibility across landed spend, contract savings, delivery reliability, and vendor concentration.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn-glass btn-sm" id="btn-export-dashboard-csv">
+                <i data-lucide="download" class="icon-xs"></i> Export Executive Brief
+              </button>
+            </div>
+          </div>
+
+          <!-- Top Metric KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card glass-panel border-cyan">
+              <div class="kpi-icon-wrap bg-cyan-dim">
+                <i data-lucide="dollar-sign" class="kpi-icon text-cyan"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Total Landed Spend (12-Wk)</span>
+                <div class="kpi-value-wrap">
+                  <span class="kpi-value text-white" id="kpi-total-spend">$0.00</span>
+                </div>
+                <div class="kpi-subtext text-emerald" id="kpi-savings-text">
+                  <i data-lucide="trending-down" class="icon-xs"></i> Realized Savings: $0.00
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel border-emerald">
+              <div class="kpi-icon-wrap bg-emerald-dim">
+                <i data-lucide="truck" class="kpi-icon text-emerald"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Weighted Delivery OTD</span>
+                <div class="kpi-value-wrap">
+                  <span class="kpi-value text-emerald" id="kpi-weighted-otd">0.0%</span>
+                </div>
+                <div class="kpi-subtext text-slate">Target Benchmark: ≥ 90.0%</div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel border-indigo">
+              <div class="kpi-icon-wrap bg-indigo-dim">
+                <i data-lucide="shield-alert" class="kpi-icon text-indigo"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Defect Rate (PPM)</span>
+                <div class="kpi-value-wrap">
+                  <span class="kpi-value text-white" id="kpi-defect-ppm">0 PPM</span>
+                </div>
+                <div class="kpi-subtext text-emerald" id="kpi-ppm-subtext">Ceiling Constraint: ≤ 250 PPM</div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel border-amber">
+              <div class="kpi-icon-wrap bg-amber-dim">
+                <i data-lucide="pie-chart" class="kpi-icon text-amber"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Vendor Concentration (HHI)</span>
+                <div class="kpi-value-wrap">
+                  <span class="kpi-value text-amber" id="kpi-hhi-index">0</span>
+                </div>
+                <div class="kpi-subtext text-amber" id="kpi-hhi-desc">Diversified (<1,500)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 1: Spend Waterfall & Category Breakdown -->
+          <div class="grid-2-col mt-4">
+            <div class="glass-panel card-panel">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <i data-lucide="bar-chart-3" class="icon-sm text-cyan"></i>
+                  <h3>Direct Raw Materials Spend by Category</h3>
+                </div>
+                <span class="badge-pill">8 Industrial Categories</span>
+              </div>
+              <div class="panel-body chart-container" style="height: 280px;">
+                <canvas id="chart-category-spend"></canvas>
+              </div>
+            </div>
+
+            <div class="glass-panel card-panel">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <i data-lucide="donut" class="icon-sm text-indigo"></i>
+                  <h3>Supplier Volume Share (HHI Concentration)</h3>
+                </div>
+                <span class="badge-pill">12 Approved Suppliers</span>
+              </div>
+              <div class="panel-body chart-container" style="height: 280px;">
+                <canvas id="chart-supplier-share"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2: Plant Demand vs Fill & Landed Cost Trend -->
+          <div class="grid-2-col mt-4">
+            <div class="glass-panel card-panel">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <i data-lucide="factory" class="icon-sm text-emerald"></i>
+                  <h3>Assembly Hub Spend & Volume Allocation</h3>
+                </div>
+                <span class="badge-pill">5 Assembly Plants</span>
+              </div>
+              <div class="panel-body chart-container" style="height: 280px;">
+                <canvas id="chart-plant-spend"></canvas>
+              </div>
+            </div>
+
+            <div class="glass-panel card-panel">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <i data-lucide="trending-up" class="icon-sm text-amber"></i>
+                  <h3>12-Week Time-Phased Sourcing & Cost Profile</h3>
+                </div>
+                <span class="badge-pill">Weekly Horizon</span>
+              </div>
+              <div class="panel-body chart-container" style="height: 280px;">
+                <canvas id="chart-weekly-trend"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 2: MILP ALLOCATION STUDIO & INTERACTIVE TUNING SLIDERS -->
+        <!-- ================================================================ -->
+        <section id="view-allocation" class="view-panel active">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">MILP Sourcing Allocation & Interactive Tuning Studio</h1>
+              <p class="view-desc">Inspect PuLP-optimized material purchase order schedules, fine-tune vendor share bands, and validate Minimum Order Quantities (MOQs) in real-time.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn-primary-glow btn-sm" id="btn-apply-allocation-sliders">
+                <i data-lucide="check-circle" class="icon-xs"></i> Apply Tuned Sourcing Split
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive Tuning Studio Banner -->
+          <div class="glass-panel card-panel p-4 mb-4">
+            <div class="studio-controls-bar">
+              <div class="control-group">
+                <label for="select-tuning-material">Select Direct Industrial Raw Material:</label>
+                <select id="select-tuning-material" class="select-glass"></select>
+              </div>
+
+              <div class="control-group">
+                <label for="select-tuning-plant">Target Manufacturing Plant:</label>
+                <select id="select-tuning-plant" class="select-glass"></select>
+              </div>
+
+              <div class="control-group">
+                <label for="select-tuning-week">Planning Period Week:</label>
+                <select id="select-tuning-week" class="select-glass">
+                  <option value="W01">Week 1 (W01)</option>
+                  <option value="W02">Week 2 (W02)</option>
+                  <option value="W03">Week 3 (W03)</option>
+                  <option value="W04">Week 4 (W04)</option>
+                  <option value="W05">Week 5 (W05)</option>
+                  <option value="W06">Week 6 (W06)</option>
+                  <option value="W07">Week 7 (W07)</option>
+                  <option value="W08">Week 8 (W08)</option>
+                  <option value="W09">Week 9 (W09)</option>
+                  <option value="W10">Week 10 (W10)</option>
+                  <option value="W11">Week 11 (W11)</option>
+                  <option value="W12">Week 12 (W12)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Live Net Requirement Summary Card -->
+            <div class="net-summary-strip mt-3" id="tuning-net-summary">
+              <div class="net-summary-item">
+                <span class="label">Gross Demand:</span>
+                <strong class="val text-white" id="tuning-gross-units">0 units</strong>
+              </div>
+              <div class="net-summary-item">
+                <span class="label">On-Hand Stock:</span>
+                <strong class="val text-slate" id="tuning-onhand-units">0 units</strong>
+              </div>
+              <div class="net-summary-item">
+                <span class="label">Net Sourcing Requirement:</span>
+                <strong class="val text-cyan font-mono" id="tuning-net-units">0 units</strong>
+              </div>
+              <div class="net-summary-item">
+                <span class="label">Standard Benchmark Price:</span>
+                <strong class="val text-emerald font-mono" id="tuning-std-cost">$0.00 / unit</strong>
+              </div>
+            </div>
+
+            <!-- Interactive Vendor Volume Sliders Container -->
+            <div class="vendor-sliders-container mt-4" id="vendor-sliders-list">
+              <!-- Dynamically populated vendor sliders -->
+            </div>
+          </div>
+
+          <!-- Solved Allocation Schedule Table -->
+          <div class="glass-panel card-panel mt-4">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="table" class="icon-sm text-cyan"></i>
+                <h3>Solved Sourcing Allocation Matrix (PuLP MILP Output)</h3>
+              </div>
+              <div class="filter-wrap">
+                <input type="text" id="filter-allocation-table" class="input-glass input-sm" placeholder="Search material, supplier, plant...">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="table-allocation-plan">
+                <thead>
+                  <tr>
+                    <th>Week</th>
+                    <th>Material</th>
+                    <th>Supplier</th>
+                    <th>Plant Hub</th>
+                    <th>Allocated Units</th>
+                    <th>Unit Price</th>
+                    <th>Freight</th>
+                    <th>Total Landed Cost</th>
+                    <th>PO Release</th>
+                    <th>MOQ Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-allocation-plan">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 3: PRE-PO PREDICTIVE DELIVERY DELAY RADAR -->
+        <!-- ================================================================ -->
+        <section id="view-delay-radar" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Pre-PO Predictive Delivery Delay Radar</h1>
+              <p class="view-desc">Machine-assisted pre-release risk scoring classifying shipment delay probabilities based on supplier backlog load, transit variance, and geopolitical risk factors.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn-primary-glow btn-sm" id="btn-trigger-split-sourcing">
+                <i data-lucide="shield-check" class="icon-xs"></i> Execute Split-Sourcing Contingency Rebalance
+              </button>
+            </div>
+          </div>
+
+          <!-- Delay Risk Classification Summary Cards -->
+          <div class="grid-3-col mb-4">
+            <div class="kpi-card glass-panel border-emerald">
+              <div class="kpi-icon-wrap bg-emerald-dim">
+                <i data-lucide="check-circle" class="kpi-icon text-emerald"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Low Delay Risk (P ≤ 15%)</span>
+                <div class="kpi-value text-emerald" id="radar-count-green">0 Orders</div>
+                <div class="kpi-subtext text-slate">Direct PO Dispatch Approved</div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel border-amber">
+              <div class="kpi-icon-wrap bg-amber-dim">
+                <i data-lucide="alert-triangle" class="kpi-icon text-amber"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">Moderate Delay Risk (15% < P ≤ 35%)</span>
+                <div class="kpi-value text-amber" id="radar-count-amber">0 Orders</div>
+                <div class="kpi-subtext text-slate">Expedited Transit Buffer Required</div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel border-rose">
+              <div class="kpi-icon-wrap bg-rose-dim">
+                <i data-lucide="alert-octagon" class="kpi-icon text-rose"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-label">High Delay Risk (P > 35%)</span>
+                <div class="kpi-value text-rose" id="radar-count-red">0 Orders</div>
+                <div class="kpi-subtext text-rose">Split-Sourcing Contingency Required</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Predictive Delay Telemetry Table -->
+          <div class="glass-panel card-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="radar" class="icon-sm text-cyan"></i>
+                <h3>Pre-PO Delivery Delay Probability & Telemetry Audit</h3>
+              </div>
+              <div class="filter-wrap">
+                <select id="filter-delay-risk" class="select-glass select-sm">
+                  <option value="ALL">All Risk Tiers</option>
+                  <option value="RED">High Delay Risk (RED)</option>
+                  <option value="AMBER">Moderate Risk (AMBER)</option>
+                  <option value="GREEN">Low Risk (GREEN)</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="table-delay-radar">
+                <thead>
+                  <tr>
+                    <th>PO Identifier</th>
+                    <th>Material</th>
+                    <th>Supplier</th>
+                    <th>Destination Plant</th>
+                    <th>Period</th>
+                    <th>Volume</th>
+                    <th>Backlog Load</th>
+                    <th>Transit Variance</th>
+                    <th>P(Delay) %</th>
+                    <th>Risk Category</th>
+                    <th>Recommended Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-delay-radar">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 4: SUPPLIER SCORECARDS & QUALITY MATRIX -->
+        <!-- ================================================================ -->
+        <section id="view-scorecards" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Supplier Performance Scorecards & Quality Matrix</h1>
+              <p class="view-desc">Multi-dimensional auditing of 12 global suppliers across historical On-Time Delivery (OTD), Defect PPM, ISO certifications, and composite reliability.</p>
+            </div>
+          </div>
+
+          <!-- Quadrant Chart: OTD vs Defect PPM -->
+          <div class="glass-panel card-panel mb-4">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="scatter-chart" class="icon-sm text-indigo"></i>
+                <h3>Supplier Performance Quadrant (OTD % vs Defect PPM)</h3>
+              </div>
+              <span class="badge-pill">Target: Top-Left (High OTD, Low PPM)</span>
+            </div>
+            <div class="panel-body chart-container" style="height: 320px;">
+              <canvas id="chart-scorecard-quadrant"></canvas>
+            </div>
+          </div>
+
+          <!-- Detailed Scorecard Table -->
+          <div class="glass-panel card-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="award" class="icon-sm text-cyan"></i>
+                <h3>Approved Supplier Roster & Audit Scorecard</h3>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="table-supplier-scorecards">
+                <thead>
+                  <tr>
+                    <th>Supplier ID</th>
+                    <th>Supplier Name</th>
+                    <th>Country / Hub</th>
+                    <th>Tier</th>
+                    <th>ISO Certified</th>
+                    <th>OTD %</th>
+                    <th>Defect PPM</th>
+                    <th>Audit Score</th>
+                    <th>Lead-Time Variance</th>
+                    <th>Financial Risk</th>
+                    <th>Composite Risk Index</th>
+                    <th>Reliability Rating</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-supplier-scorecards">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 5: DEMAND & MRP NETTING -->
+        <!-- ================================================================ -->
+        <section id="view-demand-mrp" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Plant Material Demand Aggregation & MRP Netting</h1>
+              <p class="view-desc">Time-phased Bill of Materials (BOM) explosion, weeks of supply, and inventory netting across 5 assembly plants.</p>
+            </div>
+          </div>
+
+          <!-- Demand Summary Metrics -->
+          <div class="grid-3-col mb-4">
+            <div class="glass-panel p-4">
+              <span class="kpi-label">Gross Material Demand (12 Wks)</span>
+              <div class="kpi-value text-white" id="mrp-total-gross">0 units</div>
+            </div>
+            <div class="glass-panel p-4">
+              <span class="kpi-label">Net Sourcing Requirements</span>
+              <div class="kpi-value text-cyan" id="mrp-total-net">0 units</div>
+            </div>
+            <div class="glass-panel p-4">
+              <span class="kpi-label">Inventory Buffer Coverage</span>
+              <div class="kpi-value text-emerald" id="mrp-inventory-cov">0%</div>
+            </div>
+          </div>
+
+          <!-- Demand Netting Table with Inline Override -->
+          <div class="glass-panel card-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="boxes" class="icon-sm text-cyan"></i>
+                <h3>Time-Phased Netting Requirements (Click Value to Override)</h3>
+              </div>
+              <div class="filter-wrap">
+                <input type="text" id="filter-mrp-table" class="input-glass input-sm" placeholder="Filter material or plant...">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="table-mrp-netting">
+                <thead>
+                  <tr>
+                    <th>Week</th>
+                    <th>Material ID</th>
+                    <th>Material Name</th>
+                    <th>Category</th>
+                    <th>Plant Location</th>
+                    <th>Gross Demand</th>
+                    <th>On-Hand Stock</th>
+                    <th>Safety Buffer</th>
+                    <th>Net Sourcing Req</th>
+                    <th>Criticality</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-mrp-netting">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 6: WHAT-IF SCENARIO SIMULATOR -->
+        <!-- ================================================================ -->
+        <section id="view-simulator" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Interactive What-If Strategy & Disruption Simulator</h1>
+              <p class="view-desc">Sub-second parametric stress-testing: simulate supplier factory outages, demand spikes, logistics congestion, and quality purges.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn-glass btn-sm" id="btn-reset-scenario">
+                <i data-lucide="rotate-ccw" class="icon-xs"></i> Reset to Baseline
+              </button>
+            </div>
+          </div>
+
+          <div class="grid-2-col mb-4">
+            <!-- Simulator Controls Card -->
+            <div class="glass-panel card-panel p-4">
+              <h3 class="font-semibold text-white mb-3 flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="icon-sm text-cyan"></i>
+                Disruption Parameters
+              </h3>
+
+              <!-- Preset Scenario Buttons -->
+              <div class="preset-buttons mb-4">
+                <button class="btn-scenario-preset" data-preset="shutdown_s003">
+                  🔥 Nippon Metallurgy Outage (-100%)
+                </button>
+                <button class="btn-scenario-preset" data-preset="surge_detroit">
+                  📈 Detroit Demand Surge (+45%)
+                </button>
+                <button class="btn-scenario-preset" data-preset="freight_delay">
+                  🚢 Maritime Congestion (+3 Wks)
+                </button>
+                <button class="btn-scenario-preset" data-preset="quality_purge">
+                  🛡️ Quality Purge (PPM ≤ 200)
+                </button>
+              </div>
+
+              <!-- Parameter Sliders -->
+              <div class="form-group mb-3">
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Supplier Capacity Reduction:</span>
+                  <strong class="text-rose font-mono" id="val-sim-cap">0%</strong>
+                </div>
+                <select id="select-sim-supplier" class="select-glass select-sm mb-2">
+                  <option value="SUP_003">SUP_003: Nippon Advanced Metallurgy (Japan)</option>
+                  <option value="SUP_001">SUP_001: Apex Precision Metals GmbH (Germany)</option>
+                  <option value="SUP_002">SUP_002: Vanguard Industrial Dynamics (USA)</option>
+                  <option value="SUP_005">SUP_005: MexSteel & Polymer Fabrica (Mexico)</option>
+                </select>
+                <input type="range" id="slider-sim-cap" min="0" max="100" value="0" class="range-slider">
+              </div>
+
+              <div class="form-group mb-3">
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Global Demand Surge (%):</span>
+                  <strong class="text-cyan font-mono" id="val-sim-demand">0%</strong>
+                </div>
+                <input type="range" id="slider-sim-demand" min="0" max="100" value="0" class="range-slider">
+              </div>
+
+              <div class="form-group mb-3">
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Maritime Transit Delay (+Weeks):</span>
+                  <strong class="text-amber font-mono" id="val-sim-leadtime">+0 Wks</strong>
+                </div>
+                <input type="range" id="slider-sim-leadtime" min="0" max="4" value="0" class="range-slider">
+              </div>
+
+              <button class="btn-primary-glow w-full mt-3" id="btn-run-simulation">
+                <i data-lucide="play" class="icon-xs"></i> Execute Stress-Test Simulation
+              </button>
+            </div>
+
+            <!-- Scenario Impact Delta Card -->
+            <div class="glass-panel card-panel p-4" id="sim-impact-card">
+              <h3 class="font-semibold text-white mb-3 flex items-center gap-2">
+                <i data-lucide="activity" class="icon-sm text-emerald"></i>
+                Baseline vs. Scenario Delta Analysis
+              </h3>
+
+              <div class="impact-metrics-grid mb-4">
+                <div class="impact-item">
+                  <span class="impact-label">Landed Cost Delta</span>
+                  <div class="impact-val" id="sim-delta-cost">$0.00 (+0.0%)</div>
+                </div>
+                <div class="impact-item">
+                  <span class="impact-label">Service Level / Fill Rate</span>
+                  <div class="impact-val text-emerald" id="sim-delta-service">100.0%</div>
+                </div>
+                <div class="impact-item">
+                  <span class="impact-label">Unmet Demand Deficit</span>
+                  <div class="impact-val text-white" id="sim-delta-unmet">0 units</div>
+                </div>
+                <div class="impact-item">
+                  <span class="impact-label">Concentration (HHI)</span>
+                  <div class="impact-val text-amber" id="sim-delta-hhi">0</div>
+                </div>
+              </div>
+
+              <!-- Automated Contingency Recommendations -->
+              <div class="contingency-box">
+                <span class="contingency-title">STRATEGIC CONTINGENCY RECOMMENDATION:</span>
+                <div id="sim-recommendations-list" class="contingency-content">
+                  Execute simulation to generate prescriptive supply chain mitigation actions.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 7: 5-STAGE GOVERNANCE & DECISION LEDGER -->
+        <!-- ================================================================ -->
+        <section id="view-governance" class="view-panel">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">5-Stage Sourcing Governance & Tamper-Evident Ledger</h1>
+              <p class="view-desc">Formal cross-functional procurement approval cadence from Demand Aggregation to Executive Sourcing Award with cryptographic audit hashes.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn-primary-glow btn-sm" id="btn-open-signoff-modal">
+                <i data-lucide="signature" class="icon-xs"></i> Sign Off Active Stage
+              </button>
+            </div>
+          </div>
+
+          <!-- 5-Stage Visual Stepper -->
+          <div class="glass-panel card-panel p-4 mb-4">
+            <div class="stage-stepper" id="governance-stepper">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Immutable Decision Audit Ledger Table -->
+          <div class="glass-panel card-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <i data-lucide="lock" class="icon-sm text-cyan"></i>
+                <h3>Tamper-Evident Sourcing Decision Ledger</h3>
+              </div>
+              <span class="badge-pill">SHA-256 Checksums</span>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="table-governance-ledger">
+                <thead>
+                  <tr>
+                    <th>Audit Hash</th>
+                    <th>Cycle ID</th>
+                    <th>Stage</th>
+                    <th>Owner Role</th>
+                    <th>Decision Summary</th>
+                    <th>Financial Impact</th>
+                    <th>Risk Delta</th>
+                    <th>Status</th>
+                    <th>Approved By</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-governance-ledger">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- Collaborative Activity Stream Slide-Out Drawer -->
+      <aside class="activity-drawer" id="activity-drawer">
+        <div class="drawer-header">
+          <div class="flex items-center gap-2">
+            <i data-lucide="activity" class="icon-sm text-cyan"></i>
+            <h3 class="font-semibold text-white">Live Activity Stream</h3>
+          </div>
+          <button class="btn-close-drawer" id="btn-close-drawer">
+            <i data-lucide="x" class="icon-xs"></i>
+          </button>
+        </div>
+        <div class="drawer-body" id="activity-feed-list">
+          <!-- Populated dynamically -->
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 1: 1-CLICK PURCHASE ORDER RELEASE MODAL -->
+    <!-- ================================================================== -->
+    <div class="modal-backdrop" id="modal-po-release">
+      <div class="modal-container glass-modal">
+        <div class="modal-header">
+          <div class="flex items-center gap-2">
+            <i data-lucide="send" class="icon-sm text-cyan"></i>
+            <h3 class="modal-title">Universal Purchase Order Commitment Release (EDI / ERP)</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-po-modal">
+            <i data-lucide="x" class="icon-sm"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-sm text-slate mb-3">
+            Review and dispatch solved purchase order commitments directly to SAP/Oracle ERP and global supplier EDI networks.
+          </p>
+
+          <div class="po-summary-box mb-4">
+            <div class="grid-3-col text-center">
+              <div>
+                <span class="text-xs text-slate">Total PO Commitments:</span>
+                <div class="text-lg font-bold text-white" id="modal-po-count">0 Lines</div>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Total Allocated Spend:</span>
+                <div class="text-lg font-bold text-cyan" id="modal-po-spend">$0.00</div>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Compliance Status:</span>
+                <div class="text-lg font-bold text-emerald">100% MOQ Verified</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive max-h-64">
+            <table class="data-table" id="modal-po-table">
+              <thead>
+                <tr>
+                  <th>PO ID</th>
+                  <th>Supplier</th>
+                  <th>Material</th>
+                  <th>Plant Hub</th>
+                  <th>Units</th>
+                  <th>Landed Total</th>
+                  <th>Release Week</th>
+                </tr>
+              </thead>
+              <tbody id="modal-po-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-glass" id="btn-download-po-csv">
+            <i data-lucide="download" class="icon-xs"></i> Download POs (CSV)
+          </button>
+          <button class="btn-glass" id="btn-copy-po-summary">
+            <i data-lucide="copy" class="icon-xs"></i> Copy Summary
+          </button>
+          <button class="btn-primary-glow" id="btn-confirm-release-edi">
+            <i data-lucide="check" class="icon-xs"></i> Confirm & Release POs to EDI
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 2: STAGE SIGN-OFF & DECISION RECORDING MODAL -->
+    <!-- ================================================================== -->
+    <div class="modal-backdrop" id="modal-signoff">
+      <div class="modal-container glass-modal modal-sm">
+        <div class="modal-header">
+          <div class="flex items-center gap-2">
+            <i data-lucide="signature" class="icon-sm text-emerald"></i>
+            <h3 class="modal-title">Sign Off Governance Stage</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-signoff-modal">
+            <i data-lucide="x" class="icon-sm"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group mb-3">
+            <label for="signoff-stage-select">Select Stage to Ratify:</label>
+            <select id="signoff-stage-select" class="select-glass select-sm">
+              <option value="STAGE_1_DEMAND_AGGREGATION">Stage 1: Demand & MPS Aggregation</option>
+              <option value="STAGE_2_SUPPLIER_SCORECARD">Stage 2: Supplier Scorecard & Quality Audit</option>
+              <option value="STAGE_3_MILP_OPTIMIZATION">Stage 3: Multi-Objective MILP Allocation</option>
+              <option value="STAGE_4_PREDICTIVE_DELAY_REVIEW">Stage 4: Predictive Delay Review</option>
+              <option value="STAGE_5_EXECUTIVE_AWARD" selected>Stage 5: Executive Committee Award</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="signoff-decision-text">Formal Decision Record & Notes:</label>
+            <textarea id="signoff-decision-text" class="input-glass textarea-sm" rows="3" placeholder="Enter executive justification, risk sign-off, or allocation notes..."></textarea>
+          </div>
+
+          <div class="grid-2-col gap-3">
+            <div class="form-group">
+              <label for="signoff-fin-impact">Financial Impact ($):</label>
+              <input type="number" id="signoff-fin-impact" class="input-glass input-sm" value="-480000">
+            </div>
+            <div class="form-group">
+              <label for="signoff-risk-impact">Risk Score Delta:</label>
+              <input type="number" id="signoff-risk-impact" class="input-glass input-sm" value="-25">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-glass" id="btn-cancel-signoff">Cancel</button>
+          <button class="btn-primary-glow" id="btn-submit-signoff">
+            <i data-lucide="lock" class="icon-xs"></i> Sign & Lock in Ledger
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main ES6+ Reactive Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
