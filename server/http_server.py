@@ -36,26 +36,45 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status_code: int = 200, content_type: str = "application/json"):
-        self.send_response(status_code)
-        self.send_header("Content-Type", f"{content_type}; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-        self.send_header("Pragma", "no-cache")
-        self.send_header("Expires", "0")
-        self.end_headers()
+        try:
+            self.send_response(status_code)
+            self.send_header("Content-Type", f"{content_type}; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_OPTIONS(self):
         """Handle CORS pre-flight requests."""
         self._set_headers(200)
 
+    def do_HEAD(self):
+        """Handle HEAD requests (used by health checks and reverse proxies)."""
+        parsed_url = urllib.parse.urlparse(self.path)
+        path = parsed_url.path
+        if path.startswith("/api/"):
+            self._set_headers(200, "application/json")
+        else:
+            self._set_headers(200, "text/html")
+
     def _send_json(self, data: any, status_code: int = 200):
-        self._set_headers(status_code, "application/json")
-        self.wfile.write(json.dumps(data, indent=2, default=str).encode("utf-8"))
+        try:
+            self._set_headers(status_code, "application/json")
+            payload = json.dumps(data, indent=2, default=str).encode("utf-8")
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _send_error(self, message: str, status_code: int = 400):
-        self._send_json({"status": "ERROR", "error": message}, status_code)
+        try:
+            self._send_json({"status": "ERROR", "error": message}, status_code)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _parse_json_body(self) -> dict:
         try:
@@ -64,16 +83,15 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
                 return {}
             body = self.rfile.read(content_length).decode("utf-8")
             return json.loads(body)
-        except Exception as e:
+        except Exception:
             return {}
 
     def do_GET(self):
         """Route GET requests to API handlers or static files."""
-        parsed_url = urllib.parse.urlparse(self.path)
-        path = parsed_url.path
-        query = urllib.parse.parse_qs(parsed_url.query)
-
         try:
+            parsed_url = urllib.parse.urlparse(self.path)
+            path = parsed_url.path
+
             # REST API Routes
             if path == "/api/health":
                 integrity = self.orchestrator.data_loader.validate_integrity()
@@ -126,16 +144,21 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
             else:
                 # Static Web Assets Serving
                 self._serve_static(path)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
         except Exception as e:
-            self._send_error(f"Internal Server Error: {str(e)}", 500)
+            try:
+                self._send_error(f"Internal Server Error: {str(e)}", 500)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
     def do_POST(self):
         """Route POST requests for simulations, overrides, and governance."""
-        parsed_url = urllib.parse.urlparse(self.path)
-        path = parsed_url.path
-        body = self._parse_json_body()
-
         try:
+            parsed_url = urllib.parse.urlparse(self.path)
+            path = parsed_url.path
+            body = self._parse_json_body()
+
             if path == "/api/demand/override":
                 mat_id = body.get("material_id")
                 plant_id = body.get("plant_id")
@@ -174,8 +197,13 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
                 
             else:
                 self._send_error(f"POST route '{path}' not found.", 404)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
         except Exception as e:
-            self._send_error(f"Execution Error: {str(e)}", 500)
+            try:
+                self._send_error(f"Execution Error: {str(e)}", 500)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
     def _serve_static(self, path: str):
         """Serves static files from web/ folder safely."""
@@ -207,8 +235,14 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
                 content = f.read()
             self._set_headers(200, mime_type)
             self.wfile.write(content)
+        except (BrokenPipeError, ConnectionResetError):
+            # Client closed the socket prematurely (e.g. quick navigation or health check probe)
+            pass
         except Exception as e:
-            self._send_error(f"Error reading asset: {str(e)}", 500)
+            try:
+                self._send_error(f"Error reading asset: {str(e)}", 500)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
     def log_message(self, format, *args):
         # Override to suppress noisy request logging in console
@@ -218,9 +252,10 @@ def start_server(port: int = 8000, host: str = "0.0.0.0"):
     """Starts the Threaded HTTP Server."""
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, SourcingAPIHandler)
-    print(f"[HTTP SERVER] Strategic Sourcing Platform running on http://localhost:{port}")
+    print(f"[HTTP SERVER] Strategic Sourcing Platform running on http://0.0.0.0:{port}")
     httpd.serve_forever()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     start_server(port=port)
+
