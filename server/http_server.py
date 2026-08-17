@@ -184,10 +184,17 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
             
             elif path == "/api/delays/simulate_disruption":
                 # Trigger disruption in predictive delay engine and rebuild plan
-                self.orchestrator.delay_engine.active_disruption = True
+                self.orchestrator.predictive_delay_engine.active_disruption = True
                 # Rerun full pipeline with the disruption active to generate new delay telemetry
                 self.orchestrator.run_full_pipeline()
                 self._send_json({"success": True, "message": "Disruption simulation active"})
+                
+            elif path == "/api/delays/expedite":
+                po_id = body.get("po_id")
+                if po_id:
+                    self.orchestrator.predictive_delay_engine.expedited_pos.add(po_id)
+                    self.orchestrator.run_full_pipeline()
+                self._send_json({"success": True})
                 
             elif path == "/api/sourcing/decide":
                 stage_id = body.get("stage_id")

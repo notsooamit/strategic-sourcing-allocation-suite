@@ -856,7 +856,7 @@ function renderDelayRadar() {
       
       if (row.risk_tier === "AMBER") {
         riskBadge = `<span class="badge-status badge-amber">AMBER (${row.delay_probability_pct}%)</span>`;
-        actionBtn = `<button class="btn-primary-glow btn-sm btn-expedite" onclick="alert('✅ Expedited Transit Buffer applied. Estimated -3 Days Transit for ${row.po_id}')">Apply Transit Buffer</button>`;
+        actionBtn = `<button class="btn-primary-glow btn-sm btn-expedite" data-po="${row.po_id}">Apply Transit Buffer</button>`;
       }
       else if (row.risk_tier === "RED") {
         riskBadge = `<span class="badge-status badge-red">RED (${row.delay_probability_pct}%)</span>`;
@@ -879,7 +879,31 @@ function renderDelayRadar() {
         </tr>
       `;
     }).join("");
+    
+    // Add row limitation warning if there are more than 50 rows
+    if (delays.alerts.length > 50) {
+      tbody.innerHTML += `
+        <tr>
+          <td colspan="11" class="text-center text-slate text-sm p-4">
+            Showing top 50 high-priority alerts out of ${delays.summary.total_orders_audited} total orders. Use Global Split-Sourcing for bulk mitigation.
+          </td>
+        </tr>
+      `;
+    }
   }
+
+  // Setup Expedite Buttons
+  document.querySelectorAll('.btn-expedite').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const po_id = e.target.dataset.po;
+      if (!po_id) return;
+      e.target.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Expediting...`;
+      e.target.disabled = true;
+      await apiPost("/api/delays/expedite", { po_id: po_id });
+      alert(`✅ Expedited Transit Buffer Applied!\n\n${po_id} has been reprioritized for fast-track shipping. Delay probability has been artificially reduced. Re-running ML models now.`);
+      await refreshAllData();
+    });
+  });
 
   // Setup disruption simulation
   const btnDisrupt = document.getElementById("btn-simulate-disruption");
@@ -1441,11 +1465,11 @@ function setupFilterEvents() {
   const delayFilter = document.getElementById("filter-delay-risk");
   if (delayFilter) {
     delayFilter.addEventListener("change", (e) => {
-      const val = e.target.value;
+      const val = e.target.value.toLowerCase();
       const rows = document.querySelectorAll("#tbody-delay-radar tr");
       rows.forEach(r => {
-        if (val === "ALL") r.style.display = "";
-        else r.style.display = r.innerHTML.includes(val) ? "" : "none";
+        if (val === "all") r.style.display = "";
+        else r.style.display = r.innerHTML.toLowerCase().includes(val) ? "" : "none";
       });
     });
   }

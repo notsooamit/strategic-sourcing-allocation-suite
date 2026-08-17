@@ -33,6 +33,7 @@ class PredictiveDelayEngine:
         self.b_size = beta_size
         self.b_geo = beta_geo
         self.active_disruption = False
+        self.expedited_pos = set()
 
     def evaluate_allocations(self, allocations_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -81,6 +82,11 @@ class PredictiveDelayEngine:
             transit_days = f_info["transit_days"]
             lane_rel = f_info["lane_reliability"]
             
+            po_id = f"PO-{s_id}-{m_id}-{week}"
+            if po_id in self.expedited_pos:
+                transit_days = max(1, transit_days - 5)
+                lane_rel = min(100.0, lane_rel + 5.0)
+            
             # Calculate utilization just for reporting to frontend
             max_cap = cap_lookup.get((s_id, m_id, week), 10000.0)
             util_ratio = min(1.20, alloc_qty / max(100.0, max_cap))
@@ -126,7 +132,7 @@ class PredictiveDelayEngine:
                 split_needed = True
                 
             results.append({
-                "po_id": f"PO-{s_id}-{m_id}-{week}",
+                "po_id": po_id,
                 "material_id": m_id,
                 "material_name": row.get("material_name", m_id),
                 "supplier_id": s_id,
