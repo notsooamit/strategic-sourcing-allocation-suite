@@ -253,7 +253,8 @@ async function refreshAllData() {
     demand,
     cycle,
     feed,
-    spend
+    spend,
+    pricing
   ] = await Promise.all([
     apiGet("/api/dashboard"),
     apiGet("/api/materials"),
@@ -265,7 +266,8 @@ async function refreshAllData() {
     apiGet("/api/demand"),
     apiGet("/api/sourcing/cycle"),
     apiGet("/api/activity/feed"),
-    apiGet("/api/spend/analytics")
+    apiGet("/api/spend/analytics"),
+    apiGet("/api/pricing")
   ]);
 
   if (kpis) STATE.dashboard = kpis;
@@ -273,6 +275,7 @@ async function refreshAllData() {
   if (suppliers) STATE.suppliers = suppliers;
   if (plants) STATE.plants = plants;
   if (scorecards) STATE.scorecards = scorecards;
+  if (pricing) STATE.pricing = pricing;
   if (plan) STATE.allocationPlan = plan;
   if (delays) STATE.predictiveDelays = delays;
   if (demand) STATE.demandData = demand;
@@ -683,12 +686,13 @@ function renderTuningStudio() {
   let netReq = 0;
   let grossReq = 0;
   let onHand = 0;
+  let safetyStock = 0;
   let stdCost = 0.0;
 
   const matObj = STATE.materials.find(m => m.material_id === matId);
   if (matObj) stdCost = matObj.standard_cost_usd;
 
-  if (STATE.demandData.net_requirements) {
+  if (STATE.demandData && STATE.demandData.net_requirements) {
     const match = STATE.demandData.net_requirements.find(
       r => r.material_id === matId && r.plant_id === plantId && r.period_week === week
     );
@@ -696,6 +700,7 @@ function renderTuningStudio() {
       netReq = match.net_requirement_units;
       grossReq = match.gross_demand_units;
       onHand = match.on_hand_units;
+      safetyStock = match.safety_stock_units || 0;
     }
   }
 
@@ -708,7 +713,11 @@ function renderTuningStudio() {
   const stdEl = document.getElementById("tuning-std-cost");
 
   if (grossEl) grossEl.textContent = `${grossReq.toLocaleString()} units`;
-  if (onHandEl) onHandEl.textContent = `${onHand.toLocaleString()} units`;
+  
+  // Show On-Hand - Safety Stock to make the math clear: Net = Gross - (OnHand - Safety)
+  const availableInventory = Math.max(0, onHand - safetyStock);
+  if (onHandEl) onHandEl.textContent = `${onHand.toLocaleString()} (Avail: ${availableInventory.toLocaleString()})`;
+  
   if (netEl) netEl.textContent = `${netReq.toLocaleString()} units`;
   if (stdEl) stdEl.textContent = `$${stdCost.toFixed(2)} / unit`;
 
@@ -717,9 +726,15 @@ function renderTuningStudio() {
     a => a.material_id === matId && a.plant_id === plantId && a.period_week === week
   );
 
-  // Find approved suppliers (use all, or just those with allocations + top alternates)
-  // For UI clarity, let's show top 4 suppliers
-  const approvedSups = STATE.scorecards.slice(0, 4);
+  // Find approved suppliers (Only show suppliers who are contracted for this specific material)
+  const eligibleSupIds = STATE.pricing ? STATE.pricing.filter(p => p.material_id === matId).map(p => p.supplier_id) : [];
+  
+  let approvedSups = STATE.scorecards.filter(s => eligibleSupIds.includes(s.supplier_id));
+  
+  // If no pricing data loaded yet, fallback to all scorecards safely, but sort by allocated
+  if (approvedSups.length === 0 && STATE.scorecards) {
+     approvedSups = STATE.scorecards;
+  }
 
   const container = document.getElementById("vendor-sliders-list");
   if (!container) return;
