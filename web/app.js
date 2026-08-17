@@ -709,15 +709,13 @@ function renderTuningStudio() {
   // Update banner
   const grossEl = document.getElementById("tuning-gross-units");
   const onHandEl = document.getElementById("tuning-onhand-units");
+  const safetyEl = document.getElementById("tuning-safety-units");
   const netEl = document.getElementById("tuning-net-units");
   const stdEl = document.getElementById("tuning-std-cost");
 
   if (grossEl) grossEl.textContent = `${grossReq.toLocaleString()} units`;
-  
-  // Show On-Hand - Safety Stock to make the math clear: Net = Gross - (OnHand - Safety)
-  const availableInventory = Math.max(0, onHand - safetyStock);
-  if (onHandEl) onHandEl.textContent = `${onHand.toLocaleString()} (Avail: ${availableInventory.toLocaleString()})`;
-  
+  if (onHandEl) onHandEl.textContent = `${onHand.toLocaleString()} units`;
+  if (safetyEl) safetyEl.textContent = `${safetyStock.toLocaleString()} units`;
   if (netEl) netEl.textContent = `${netReq.toLocaleString()} units`;
   if (stdEl) stdEl.textContent = `$${stdCost.toFixed(2)} / unit`;
 
