@@ -181,6 +181,13 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
                 user = body.get("user", "Sourcing Lead")
                 res = self.orchestrator.apply_tuning_constraints(body, user)
                 self._send_json(res)
+            
+            elif path == "/api/delays/simulate_disruption":
+                # Trigger disruption in predictive delay engine and rebuild plan
+                self.orchestrator.delay_engine.active_disruption = True
+                # Rerun full pipeline with the disruption active to generate new delay telemetry
+                self.orchestrator.run_full_pipeline()
+                self._send_json({"success": True, "message": "Disruption simulation active"})
                 
             elif path == "/api/sourcing/decide":
                 stage_id = body.get("stage_id")

@@ -32,6 +32,7 @@ class PredictiveDelayEngine:
         self.b_var = beta_var
         self.b_size = beta_size
         self.b_geo = beta_geo
+        self.active_disruption = False
 
     def evaluate_allocations(self, allocations_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -87,6 +88,12 @@ class PredictiveDelayEngine:
             moq_val = moq_lookup.get((s_id, m_id), 500.0)
             order_ratio = min(2.5, alloc_qty / max(100.0, moq_val))
             
+            # Disruption Simulation Logic
+            if self.active_disruption and s_id.endswith(('001', '003', '005', '007')):
+                transit_days += 14
+                lane_rel -= 30.0
+                geo_risk += 2.0
+                
             # Logistic logit from spec: z = b0 + b1*(1-OTD) + b2*Var + b3*Transit + b4*(1-LaneRel) + b5*(Order/MOQ)
             # Using mapped variables: b_util corresponds to b1, b_geo to b4, etc. for backward compat
             z = (
@@ -102,19 +109,19 @@ class PredictiveDelayEngine:
             p_delay_pct = round(p_delay * 100.0, 1)
             
             # Classification
-            if p_delay_pct < 25.0:
+            if p_delay_pct <= 15.0:
                 risk_tier = "GREEN"
-                status_label = "Low Delay Risk (<25%)"
+                status_label = "Low Delay Risk (<= 15%)"
                 recommended_action = "Direct PO Release Approved"
                 split_needed = False
-            elif p_delay_pct <= 50.0:
+            elif p_delay_pct <= 35.0:
                 risk_tier = "AMBER"
-                status_label = "Moderate Delay Risk (25-50%)"
-                recommended_action = "Expedited Transit Buffer Advised"
+                status_label = "Moderate Delay Risk (15-35%)"
+                recommended_action = "Expedited Transit Buffer Required"
                 split_needed = False
             else:
                 risk_tier = "RED"
-                status_label = "High Delay Risk (>50%)"
+                status_label = "High Delay Risk (> 35%)"
                 recommended_action = "Split-Sourcing Contingency Required"
                 split_needed = True
                 

@@ -849,33 +849,52 @@ function renderDelayRadar() {
   if (badgeRed) badgeRed.textContent = delays.summary.high_risk_red_count;
 
   const tbody = document.getElementById("tbody-delay-radar");
-  if (!tbody || !delays.alerts) return;
+  if (tbody && delays.alerts) {
+    tbody.innerHTML = delays.alerts.slice(0, 50).map(row => {
+      let riskBadge = `<span class="badge-status badge-green">LOW (${row.delay_probability_pct}%)</span>`;
+      let actionBtn = `<button class="btn-primary-glow btn-sm" disabled>Direct PO Release Approved</button>`;
+      
+      if (row.risk_tier === "AMBER") {
+        riskBadge = `<span class="badge-status badge-amber">AMBER (${row.delay_probability_pct}%)</span>`;
+        actionBtn = `<button class="btn-primary-glow btn-sm btn-expedite" onclick="alert('✅ Expedited Transit Buffer applied. Estimated -3 Days Transit for ${row.po_id}')">Apply Transit Buffer</button>`;
+      }
+      else if (row.risk_tier === "RED") {
+        riskBadge = `<span class="badge-status badge-red">RED (${row.delay_probability_pct}%)</span>`;
+        actionBtn = `<button class="btn-primary-glow btn-sm btn-split" onclick="alert('✅ Executing 35% Split-Sourcing Contingency for ${row.po_id}...')">Split-Source 35%</button>`;
+      }
 
-  tbody.innerHTML = delays.alerts.slice(0, 50).map(row => {
-    let riskBadge = `<span class="badge-status badge-green">LOW (${row.delay_probability_pct}%)</span>`;
-    if (row.risk_tier === "AMBER") {
-      riskBadge = `<span class="badge-status badge-amber">MODERATE (${row.delay_probability_pct}%)</span>`;
-    } else if (row.risk_tier === "RED") {
-      riskBadge = `<span class="badge-status badge-red">HIGH (${row.delay_probability_pct}%)</span>`;
-    }
+      return `
+        <tr>
+          <td class="font-mono text-slate text-xs">${row.po_id}</td>
+          <td><strong>${row.material_name}</strong></td>
+          <td>${row.supplier_name}</td>
+          <td>${row.plant_name}</td>
+          <td class="font-mono">${row.period_week}</td>
+          <td class="font-mono">${row.allocated_units}</td>
+          <td class="font-mono">${row.utilization_pct}%</td>
+          <td class="font-mono">${row.lead_time_variance_days} d</td>
+          <td class="font-mono text-white font-bold">${row.delay_probability_pct}%</td>
+          <td>${riskBadge}</td>
+          <td>${actionBtn}</td>
+        </tr>
+      `;
+    }).join("");
+  }
 
-    return `
-      <tr>
-        <td class="font-mono text-slate">${row.po_id}</td>
-        <td><strong>${row.material_name}</strong></td>
-        <td>${row.supplier_name}</td>
-        <td>${row.plant_name}</td>
-        <td class="font-mono">${row.period_week}</td>
-        <td class="font-mono">${row.allocated_units.toLocaleString()}</td>
-        <td class="font-mono">${row.utilization_pct}%</td>
-        <td class="font-mono">${row.lead_time_variance_days} d</td>
-        <td class="font-mono font-bold">${row.delay_probability_pct}%</td>
-        <td>${riskBadge}</td>
-        <td class="text-xs ${row.risk_tier === 'RED' ? 'text-rose font-bold' : 'text-slate'}">${row.recommended_action}</td>
-      </tr>
-    `;
-  }).join("");
-
+  // Setup disruption simulation
+  const btnDisrupt = document.getElementById("btn-simulate-disruption");
+  if (btnDisrupt) {
+    const newBtn = btnDisrupt.cloneNode(true);
+    btnDisrupt.parentNode.replaceChild(newBtn, btnDisrupt);
+    newBtn.addEventListener("click", async () => {
+      newBtn.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Simulating...`;
+      await apiPost("/api/delays/simulate_disruption", {});
+      alert("🚨 GLOBAL TRANSIT DISRUPTION SIMULATED 🚨\n\nMajor port closures and geopolitical instability injected into the model. Delay probabilities across the network have spiked.");
+      await refreshAllData();
+      newBtn.innerHTML = `<i data-lucide="siren" class="icon-xs"></i> Simulate Transit Disruption`;
+      initLucideIcons();
+    });
+  }
   const btnSplit = document.getElementById("btn-trigger-split-sourcing");
   if (btnSplit) {
     btnSplit.onclick = async () => {
