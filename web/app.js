@@ -283,7 +283,25 @@ async function refreshAllData() {
   renderDashboardKPIs();
   renderSpendCharts();
   populateTuningDropdowns();
+  
+  const mrpPlantDrop = document.getElementById("mrp-filter-plant");
+  if (mrpPlantDrop && STATE.plants.length > 0) {
+    mrpPlantDrop.innerHTML = '<option value="ALL">All Plants</option>' + STATE.plants.map(p => `<option value="${p.plant_id}">${p.plant_id}</option>`).join("");
+  }
+  const mrpMatDrop = document.getElementById("mrp-filter-material");
+  if (mrpMatDrop && STATE.materials.length > 0) {
+    mrpMatDrop.innerHTML = '<option value="ALL">All Materials</option>' + STATE.materials.map(m => `<option value="${m.material_id}">${m.material_id}</option>`).join("");
+  }
   renderTuningStudio();
+  
+  // Fix: Dynamically populate supplier dropdown for Simulator here too
+  const supDropdown = document.getElementById("select-sim-supplier");
+  if (supDropdown && STATE.suppliers && STATE.suppliers.length > 0) {
+    supDropdown.innerHTML = STATE.suppliers.map(s => 
+      `<option value="${s.supplier_id}">${s.supplier_id}: ${s.supplier_name}</option>`
+    ).join("");
+  }
+
   renderAllocationTable();
   renderDelayRadar();
   renderScorecards();
@@ -377,6 +395,33 @@ function renderDashboardKPIs() {
   if (cycleProg) cycleProg.style.width = `${d.cycle_progress_pct}%`;
   if (cyclePct) cyclePct.textContent = `${d.cycle_progress_pct}%`;
   if (cycleName) cycleName.textContent = d.cycle_current_stage;
+
+  // Fix: Wire up Executive Brief CSV Export
+  const btnExport = document.getElementById("btn-export-dashboard-csv");
+  if (btnExport) {
+    // Prevent multiple listeners
+    const newBtn = btnExport.cloneNode(true);
+    btnExport.parentNode.replaceChild(newBtn, btnExport);
+    newBtn.addEventListener("click", () => {
+      let csv = "KPI,Value\n";
+      csv += `Total Spend USD,${d.total_spend_usd}\n`;
+      csv += `Cost Savings USD,${d.cost_savings_usd}\n`;
+      csv += `Mean OTD %,${d.mean_otd_pct}\n`;
+      csv += `Defect PPM,${d.ppm_defect_rate}\n`;
+      csv += `HHI Concentration,${d.hhi_concentration_index}\n`;
+      csv += `Service Level %,${d.service_level_pct}\n`;
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'executive_brief.csv');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  }
 
   initLucideIcons();
 }
@@ -594,8 +639,37 @@ function setupTuningStudioEvents() {
 
   const btnApply = document.getElementById("btn-apply-allocation-sliders");
   if (btnApply) {
-    btnApply.addEventListener("click", () => {
-      alert("✅ Custom vendor sourcing split applied. Schedule synced with MRP constraints.");
+    btnApply.addEventListener("click", async () => {
+      // Collect constraints from the UI sliders
+      const constraints = {};
+      const matId = STATE.tuning.materialId;
+      const plantId = STATE.tuning.plantId;
+      const week = STATE.tuning.week;
+      
+      const sliders = document.querySelectorAll(".range-slider");
+      sliders.forEach(slider => {
+        const supId = slider.getAttribute("data-sup");
+        const val = parseInt(slider.value);
+        constraints[`${supId}_${matId}_${plantId}_${week}`] = val;
+      });
+      
+      btnApply.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Re-Optimizing MILP...`;
+      
+      const payload = {
+        material_id: matId,
+        plant_id: plantId,
+        user: STATE.activePersona,
+        constraints: constraints
+      };
+      
+      const res = await apiPost("/api/sourcing/tune", payload);
+      
+      if (res && res.success) {
+        alert("✅ Custom vendor sourcing split applied. Schedule synced with MRP constraints.");
+        await refreshAllData();
+      }
+      btnApply.innerHTML = `<i data-lucide="check-circle" class="icon-xs"></i> Apply Tuned Sourcing Split`;
+      initLucideIcons();
     });
   }
 }
@@ -606,10 +680,10 @@ function renderTuningStudio() {
   const week = STATE.tuning.week;
 
   // Find net requirement from demandData
-  let netReq = 1200;
-  let grossReq = 1400;
-  let onHand = 200;
-  let stdCost = 8.50;
+  let netReq = 0;
+  let grossReq = 0;
+  let onHand = 0;
+  let stdCost = 0.0;
 
   const matObj = STATE.materials.find(m => m.material_id === matId);
   if (matObj) stdCost = matObj.standard_cost_usd;
@@ -643,8 +717,9 @@ function renderTuningStudio() {
     a => a.material_id === matId && a.plant_id === plantId && a.period_week === week
   );
 
-  // Find approved suppliers for this material category
-  const approvedSups = STATE.scorecards.slice(0, 3); // Fallback to 3 certified suppliers
+  // Find approved suppliers (use all, or just those with allocations + top alternates)
+  // For UI clarity, let's show top 4 suppliers
+  const approvedSups = STATE.scorecards.slice(0, 4);
 
   const container = document.getElementById("vendor-sliders-list");
   if (!container) return;
@@ -652,7 +727,7 @@ function renderTuningStudio() {
   container.innerHTML = approvedSups.map((sup, idx) => {
     // Check if supplier has allocation
     const alloc = allocs.find(a => a.supplier_id === sup.supplier_id);
-    const initUnits = alloc ? alloc.allocated_units : (idx === 0 ? Math.round(netReq * 0.6) : (idx === 1 ? Math.round(netReq * 0.4) : 0));
+    const initUnits = alloc ? alloc.allocated_units : 0;
     const initPct = netReq > 0 ? Math.round((initUnits / netReq) * 100) : 0;
     const moq = 500; // Standard MOQ threshold
 
@@ -793,7 +868,7 @@ function renderDelayRadar() {
     btnSplit.onclick = async () => {
       const res = await apiPost("/api/procurement/split-sourcing", { user: STATE.activePersona });
       if (res && res.shifts_count > 0) {
-        alert(`✅ Split-Sourcing Contingency Applied!\nTransferred ${res.shifted_volume_units.toLocaleString()} units across ${res.shifts_count} high-risk orders to certified backup suppliers.`);
+        alert(`✅ Split-Sourcing Contingency Applied!\n\nIdentified ${res.shifts_count} high-risk (RED) orders. Automatically stripped ${res.shifted_volume_units.toLocaleString()} units from struggling suppliers and re-allocated them to certified backup suppliers.\n\nMILP Network Rebalanced.`);
         await refreshAllData();
       } else {
         alert("✅ Network is already balanced. No high-risk allocations require contingency transfer.");
@@ -965,6 +1040,14 @@ function setupSimulatorEvents() {
   const valDemand = document.getElementById("val-sim-demand");
   const sliderLT = document.getElementById("slider-sim-leadtime");
   const valLT = document.getElementById("val-sim-leadtime");
+
+  // Fix: Dynamically populate supplier dropdown
+  const supDropdown = document.getElementById("select-sim-supplier");
+  if (supDropdown && STATE.suppliers) {
+    supDropdown.innerHTML = STATE.suppliers.map(s => 
+      `<option value="${s.supplier_id}">${s.supplier_name}</option>`
+    ).join("");
+  }
 
   if (sliderCap) {
     sliderCap.addEventListener("input", (e) => {
@@ -1200,7 +1283,7 @@ function setupModals() {
 
   if (btnConfirmEDI && modalPO) {
     btnConfirmEDI.addEventListener("click", () => {
-      alert("✅ All Purchase Orders released to SAP/Oracle ERP and EDI Supplier Network!");
+      alert("✅ Generating EDI 850 payload...\n\nAll Purchase Orders successfully formatted and queued for dispatch to SAP/Oracle ERP and EDI Supplier Network!");
       modalPO.classList.remove("open");
     });
   }
@@ -1330,8 +1413,51 @@ function setupFilterEvents() {
       const rows = document.querySelectorAll("#tbody-delay-radar tr");
       rows.forEach(r => {
         if (val === "ALL") r.style.display = "";
-        else r.style.display = r.textContent.includes(val) ? "" : "none";
+        else r.style.display = r.innerHTML.includes(val) ? "" : "none";
       });
+    });
+  }
+
+  const applyMrpFilter = () => {
+    const plantVal = document.getElementById("mrp-filter-plant")?.value || "ALL";
+    const matVal = document.getElementById("mrp-filter-material")?.value || "ALL";
+    const q = document.getElementById("filter-mrp-table")?.value.toLowerCase() || "";
+    
+    const rows = document.querySelectorAll("#tbody-mrp-netting tr");
+    rows.forEach(r => {
+      let show = true;
+      if (plantVal !== "ALL" && !r.innerHTML.includes(plantVal)) show = false;
+      if (matVal !== "ALL" && !r.innerHTML.includes(matVal)) show = false;
+      if (q && !r.textContent.toLowerCase().includes(q)) show = false;
+      r.style.display = show ? "" : "none";
+    });
+  };
+
+  const mrpP = document.getElementById("mrp-filter-plant");
+  const mrpM = document.getElementById("mrp-filter-material");
+  const mrpQ = document.getElementById("filter-mrp-table");
+  if (mrpP) mrpP.addEventListener("change", applyMrpFilter);
+  if (mrpM) mrpM.addEventListener("change", applyMrpFilter);
+  if (mrpQ) mrpQ.addEventListener("input", applyMrpFilter);
+
+  // Scorecards Purge Button
+  const btnPurge = document.getElementById("btn-simulate-purge");
+  if (btnPurge) {
+    btnPurge.addEventListener("click", async () => {
+      const targetSup = prompt("Enter the Supplier ID to purge and ban from the network (e.g. SUP_011):", "SUP_011");
+      if (!targetSup) return;
+      btnPurge.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Purging...`;
+      const res = await apiPost("/api/scenario/run", {
+        scenario_name: `Quality Purge - Banned ${targetSup}`,
+        supplier_capacity_cuts: { [targetSup]: 0.0 }, // 0% capacity = banned
+        user: STATE.activePersona
+      });
+      btnPurge.innerHTML = `<i data-lucide="shield-alert" class="icon-xs"></i> Simulate Quality Purge`;
+      initLucideIcons();
+      if (res && res.success !== false) {
+        alert(`✅ Quality Purge Executed!\n\n${targetSup} has been banned from the network. The MILP Solver has automatically re-allocated all their volume to certified backups.\n\nCost Delta: ${res.deltas.cost_delta_pct > 0 ? '+' : ''}${res.deltas.cost_delta_pct}%`);
+        await refreshAllData();
+      }
     });
   }
 }

@@ -637,6 +637,11 @@
               <h1 class="view-title">Supplier Performance Scorecards & Quality Matrix</h1>
               <p class="view-desc">Multi-dimensional auditing of 12 global suppliers across historical On-Time Delivery (OTD), Defect PPM, ISO certifications, and composite reliability.</p>
             </div>
+            <div class="view-actions">
+              <button class="btn-primary-glow btn-sm" id="btn-simulate-purge">
+                <i data-lucide="shield-alert" class="icon-xs"></i> Simulate Quality Purge
+              </button>
+            </div>
           </div>
 
           <!-- Quadrant Chart: OTD vs Defect PPM -->
@@ -722,6 +727,12 @@
                 <h3>Time-Phased Netting Requirements (Click Value to Override)</h3>
               </div>
               <div class="filter-wrap">
+                <select id="mrp-filter-plant" class="select-glass select-sm">
+                  <option value="ALL">All Plants</option>
+                </select>
+                <select id="mrp-filter-material" class="select-glass select-sm">
+                  <option value="ALL">All Materials</option>
+                </select>
                 <input type="text" id="filter-mrp-table" class="input-glass input-sm" placeholder="Filter material or plant...">
               </div>
             </div>

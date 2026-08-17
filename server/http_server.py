@@ -177,6 +177,11 @@ class SourcingAPIHandler(BaseHTTPRequestHandler):
                 res = self.orchestrator.run_scenario(body, user)
                 self._send_json(res)
                 
+            elif path == "/api/sourcing/tune":
+                user = body.get("user", "Sourcing Lead")
+                res = self.orchestrator.apply_tuning_constraints(body, user)
+                self._send_json(res)
+                
             elif path == "/api/sourcing/decide":
                 stage_id = body.get("stage_id")
                 decision_text = body.get("decision_text")

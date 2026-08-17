@@ -32,7 +32,8 @@ class SourcingOptimizer:
         lead_time_delay_weeks: int = 0,
         banned_suppliers: List[str] = None,
         enforce_moq: bool = True,
-        enforce_contract_bands: bool = True
+        enforce_contract_bands: bool = True,
+        manual_tuning_constraints: Dict[str, float] = None
     ) -> Dict[str, Any]:
         """
         Executes the PuLP MILP solver across all materials, plants, and planning weeks.
@@ -208,6 +209,18 @@ class SourcingOptimizer:
                             prob += x_vars[(s, m, p)] <= (max_share * req) * y_vars[(s, m)], f"MaxShare_{s}_{m}_{p}"
                             # x_s >= min_share * req * y_s (if selected, must take at least min_share)
                             prob += x_vars[(s, m, p)] >= (min_share * req) * y_vars[(s, m)], f"MinShare_{s}_{m}_{p}"
+
+            # 3.5 Manual Tuning Overrides (from Sourcing Lead)
+            if manual_tuning_constraints:
+                for (s, m, p), x_var in x_vars.items():
+                    key = f"{s}_{m}_{p}_{w}"
+                    if key in manual_tuning_constraints:
+                        target_pct = manual_tuning_constraints[key] / 100.0
+                        # Find req for this m, p
+                        req = next((r for m_cand, p_cand, r in demand_tuples if m_cand == m and p_cand == p), 0)
+                        if req > 0:
+                            target_vol = int(round(target_pct * req))
+                            prob += x_var == target_vol, f"ManualTuning_{s}_{m}_{p}"
 
             # 4. Quality PPM Ceiling Constraint per Material
             for m in needed_materials:

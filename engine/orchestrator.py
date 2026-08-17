@@ -87,11 +87,11 @@ class SourcingOrchestrator:
             if len(self.activity_log) > 50:
                 self.activity_log.pop()
 
-    def run_full_pipeline(self) -> Dict[str, Any]:
+    def run_full_pipeline(self, manual_tuning_constraints: Dict[str, float] = None) -> Dict[str, Any]:
         """Executes full optimization, delay prediction, and spend analytics reconciliation."""
         with self._lock:
             # 1. Run MILP Solver
-            opt_res = self.optimizer.optimize_sourcing()
+            opt_res = self.optimizer.optimize_sourcing(manual_tuning_constraints=manual_tuning_constraints)
             alloc_df = opt_res["allocations_df"]
             self.data_loader.save_optimized_plan(alloc_df)
             self._cached_optimization_result = opt_res
@@ -235,6 +235,28 @@ class SourcingOrchestrator:
             return {
                 "success": True,
                 "message": f"Demand updated from {old_val} to {new_demand} units. Solver re-optimized schedule.",
+                "pipeline": pipe_res
+            }
+
+    def apply_tuning_constraints(self, payload: Dict[str, Any], user: str = "Sourcing Lead") -> Dict[str, Any]:
+        """Re-runs MILP solver with strict manual tuning share constraints applied by the user."""
+        with self._lock:
+            constraints = payload.get("constraints", {})
+            mat_id = payload.get("material_id", "Unknown")
+            plant_id = payload.get("plant_id", "Unknown")
+            
+            # Recalculate pipeline with forced solver constraints
+            pipe_res = self.run_full_pipeline(manual_tuning_constraints=constraints)
+            
+            self.log_activity(
+                user=user,
+                action="MANUAL_ALLOCATION_TUNE",
+                details=f"Applied custom vendor split for {mat_id} at {plant_id}. Solver schedule synced with MRP."
+            )
+            
+            return {
+                "success": True,
+                "message": "Custom vendor sourcing split applied. Schedule synced with MRP constraints.",
                 "pipeline": pipe_res
             }
 
