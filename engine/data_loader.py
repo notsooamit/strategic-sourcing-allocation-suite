@@ -31,53 +31,59 @@ class DataLoader:
         self.reload_all()
 
     def reload_all(self):
-        """Loads or reloads all CSV datasets into memory."""
+        """Loads or reloads all datasets into memory from SQLite database."""
+        db_path = os.path.join(self.data_dir, "sourcing_platform.db")
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(f"SQLite database not found at {db_path}. Please run init_sqlite_db.py first.")
+            
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        
         with self._lock:
             # Master data
-            self._cache["material_master"] = pd.read_csv(os.path.join(self.master_dir, "material_master.csv"))
-            self._cache["supplier_master"] = pd.read_csv(os.path.join(self.master_dir, "supplier_master.csv"))
-            self._cache["plant_master"] = pd.read_csv(os.path.join(self.master_dir, "plant_master.csv"))
-            self._cache["bom_direct_materials"] = pd.read_csv(os.path.join(self.master_dir, "bom_direct_materials.csv"))
+            self._cache["material_master"] = pd.read_sql("SELECT * FROM material_master", conn)
+            self._cache["supplier_master"] = pd.read_sql("SELECT * FROM supplier_master", conn)
+            self._cache["plant_master"] = pd.read_sql("SELECT * FROM plant_master", conn)
+            self._cache["bom_direct_materials"] = pd.read_sql("SELECT * FROM bom_direct_materials", conn)
             
             # Suppliers
-            self._cache["supplier_material_pricing"] = pd.read_csv(os.path.join(self.supplier_dir, "supplier_material_pricing.csv"))
-            self._cache["supplier_capacity_limits"] = pd.read_csv(os.path.join(self.supplier_dir, "supplier_capacity_limits.csv"))
-            self._cache["supplier_scorecards"] = pd.read_csv(os.path.join(self.supplier_dir, "supplier_scorecards.csv"))
-            self._cache["contract_commitments"] = pd.read_csv(os.path.join(self.supplier_dir, "contract_commitments.csv"))
+            self._cache["supplier_material_pricing"] = pd.read_sql("SELECT * FROM supplier_material_pricing", conn)
+            self._cache["supplier_capacity_limits"] = pd.read_sql("SELECT * FROM supplier_capacity_limits", conn)
+            self._cache["supplier_scorecards"] = pd.read_sql("SELECT * FROM supplier_scorecards", conn)
+            self._cache["contract_commitments"] = pd.read_sql("SELECT * FROM contract_commitments", conn)
             
             # Demand & Logistics
-            self._cache["plant_material_demand"] = pd.read_csv(os.path.join(self.demand_dir, "plant_material_demand.csv"))
-            self._cache["current_inventory"] = pd.read_csv(os.path.join(self.demand_dir, "current_inventory.csv"))
-            self._cache["freight_lane_matrix"] = pd.read_csv(os.path.join(self.logistics_dir, "freight_lane_matrix.csv"))
+            self._cache["plant_material_demand"] = pd.read_sql("SELECT * FROM plant_material_demand", conn)
+            self._cache["current_inventory"] = pd.read_sql("SELECT * FROM current_inventory", conn)
+            self._cache["freight_lane_matrix"] = pd.read_sql("SELECT * FROM freight_lane_matrix", conn)
             
             # Outputs
-            opt_path = os.path.join(self.output_dir, "optimized_sourcing_plan.csv")
-            if os.path.exists(opt_path):
-                self._cache["optimized_sourcing_plan"] = pd.read_csv(opt_path)
-            else:
+            try:
+                self._cache["optimized_sourcing_plan"] = pd.read_sql("SELECT * FROM optimized_sourcing_plan", conn)
+            except Exception:
                 self._cache["optimized_sourcing_plan"] = pd.DataFrame(columns=[
                     "material_id", "supplier_id", "plant_id", "period_week",
                     "allocated_units", "landed_cost_usd", "po_release_week",
                     "expected_delivery_week", "moq_compliance_status"
                 ])
                 
-            dec_path = os.path.join(self.output_dir, "sourcing_decisions.csv")
-            if os.path.exists(dec_path):
-                self._cache["sourcing_decisions"] = pd.read_csv(dec_path)
-            else:
+            try:
+                self._cache["sourcing_decisions"] = pd.read_sql("SELECT * FROM sourcing_decisions", conn)
+            except Exception:
                 self._cache["sourcing_decisions"] = pd.DataFrame(columns=[
                     "cycle_id", "stage", "owner_role", "decision", "financial_impact",
                     "risk_impact", "status", "approved_by", "timestamp"
                 ])
                 
-            delay_path = os.path.join(self.output_dir, "predictive_delay_alerts.csv")
-            if os.path.exists(delay_path):
-                self._cache["predictive_delay_alerts"] = pd.read_csv(delay_path)
-            else:
+            try:
+                self._cache["predictive_delay_alerts"] = pd.read_sql("SELECT * FROM predictive_delay_alerts", conn)
+            except Exception:
                 self._cache["predictive_delay_alerts"] = pd.DataFrame(columns=[
                     "material_id", "supplier_id", "plant_id", "period_week",
                     "delay_probability", "risk_category", "recommended_action"
                 ])
+                
+        conn.close()
 
     # Accessor properties
     @property
@@ -151,25 +157,32 @@ class DataLoader:
             return self._cache["predictive_delay_alerts"].copy()
 
     # Mutation and Persistence
+    def _save_to_db(self, df: pd.DataFrame, table_name: str):
+        import sqlite3
+        db_path = os.path.join(self.data_dir, "sourcing_platform.db")
+        conn = sqlite3.connect(db_path)
+        df.to_sql(table_name, conn, if_exists='replace', index=False)
+        conn.close()
+
     def save_optimized_plan(self, df: pd.DataFrame):
         with self._lock:
             self._cache["optimized_sourcing_plan"] = df.copy()
-            df.to_csv(os.path.join(self.output_dir, "optimized_sourcing_plan.csv"), index=False)
+            self._save_to_db(df, "optimized_sourcing_plan")
 
     def save_decisions(self, df: pd.DataFrame):
         with self._lock:
             self._cache["sourcing_decisions"] = df.copy()
-            df.to_csv(os.path.join(self.output_dir, "sourcing_decisions.csv"), index=False)
+            self._save_to_db(df, "sourcing_decisions")
 
     def save_delay_alerts(self, df: pd.DataFrame):
         with self._lock:
             self._cache["predictive_delay_alerts"] = df.copy()
-            df.to_csv(os.path.join(self.output_dir, "predictive_delay_alerts.csv"), index=False)
+            self._save_to_db(df, "predictive_delay_alerts")
 
     def update_demand(self, df: pd.DataFrame):
         with self._lock:
             self._cache["plant_material_demand"] = df.copy()
-            df.to_csv(os.path.join(self.demand_dir, "plant_material_demand.csv"), index=False)
+            self._save_to_db(df, "plant_material_demand")
 
     def validate_integrity(self) -> Dict[str, Any]:
         """Validates referential integrity between all relational tables."""
