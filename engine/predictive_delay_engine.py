@@ -49,15 +49,21 @@ class PredictiveDelayEngine:
         cap_lookup = {}
         for _, r in df_capacity.iterrows():
             cap_lookup[(r["supplier_id"], r["material_id"], r["period_week"])] = float(r["max_weekly_capacity_units"])
-            
+        # Build pricing and freight lookups
         df_pricing = self.loader.pricing
+        df_freight = self.loader.freight
+        
         moq_lookup = {}
         for _, r in df_pricing.iterrows():
             moq_lookup[(r["supplier_id"], r["material_id"])] = float(r["moq_units"])
-
-        # Calculate supplier weekly material loading
-        weekly_material_load = allocations_df.groupby(["supplier_id", "material_id", "period_week"])["allocated_units"].sum().to_dict()
-        
+            
+        freight_lookup = {}
+        for _, r in df_freight.iterrows():
+            freight_lookup[(r["supplier_id"], r["plant_id"])] = {
+                "transit_days": int(r["transit_time_days"]),
+                "lane_reliability": float(r.get("lane_reliability_pct", 95.0))
+            }
+            
         results = []
         for _, row in allocations_df.iterrows():
             s_id = row["supplier_id"]
@@ -65,44 +71,50 @@ class PredictiveDelayEngine:
             p_id = row["plant_id"]
             week = row["period_week"]
             alloc_qty = float(row["allocated_units"])
-            
             sup_info = scorecards_dict.get(s_id, {})
+            otd = float(sup_info.get("historical_otd_pct", 95.0))
             var_days = float(sup_info.get("lead_time_variance_days", 1.5))
             geo_risk = float(sup_info.get("base_financial_risk_score", 1.5))
             
-            # Supplier utilization & Order/MOQ ratio calculation
+            f_info = freight_lookup.get((s_id, p_id), {"transit_days": 7, "lane_reliability": 95.0})
+            transit_days = f_info["transit_days"]
+            lane_rel = f_info["lane_reliability"]
+            
+            # Calculate utilization just for reporting to frontend
             max_cap = cap_lookup.get((s_id, m_id, week), 10000.0)
+            util_ratio = min(1.20, alloc_qty / max(100.0, max_cap))
+            
             moq_val = moq_lookup.get((s_id, m_id), 500.0)
-            total_mat_load = weekly_material_load.get((s_id, m_id, week), alloc_qty)
-            util_ratio = min(1.20, total_mat_load / max(100.0, max_cap))
             order_ratio = min(2.5, alloc_qty / max(100.0, moq_val))
             
-            # Logistic logit: P(Delay > 3d)
+            # Logistic logit from spec: z = b0 + b1*(1-OTD) + b2*Var + b3*Transit + b4*(1-LaneRel) + b5*(Order/MOQ)
+            # Using mapped variables: b_util corresponds to b1, b_geo to b4, etc. for backward compat
             z = (
                 self.b0 +
-                (self.b_util * util_ratio) +
-                (self.b_var * var_days) +
-                (self.b_size * order_ratio) +
-                (self.b_geo * geo_risk)
+                1.5 * (1.0 - (otd / 100.0)) +
+                self.b_var * var_days +
+                0.05 * transit_days +
+                2.0 * (1.0 - (lane_rel / 100.0)) +
+                self.b_size * order_ratio
             )
             
             p_delay = 1.0 / (1.0 + math.exp(-z))
             p_delay_pct = round(p_delay * 100.0, 1)
             
             # Classification
-            if p_delay_pct <= 15.0:
+            if p_delay_pct < 25.0:
                 risk_tier = "GREEN"
-                status_label = "Low Delay Risk (<15%)"
+                status_label = "Low Delay Risk (<25%)"
                 recommended_action = "Direct PO Release Approved"
                 split_needed = False
-            elif p_delay_pct <= 35.0:
+            elif p_delay_pct <= 50.0:
                 risk_tier = "AMBER"
-                status_label = "Moderate Delay Risk (15-35%)"
+                status_label = "Moderate Delay Risk (25-50%)"
                 recommended_action = "Expedited Transit Buffer Advised"
                 split_needed = False
             else:
                 risk_tier = "RED"
-                status_label = "High Delay Risk (>35%)"
+                status_label = "High Delay Risk (>50%)"
                 recommended_action = "Split-Sourcing Contingency Required"
                 split_needed = True
                 

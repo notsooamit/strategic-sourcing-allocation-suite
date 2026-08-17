@@ -16,47 +16,45 @@ class ScorecardEngine:
     def __init__(self, data_loader: DataLoader, weights: Dict[str, float] = None):
         self.loader = data_loader
         self.weights = weights or {
-            "w_otd": 0.35,
-            "w_qual": 0.30,
-            "w_var": 0.20,
-            "w_geo": 0.15
+            "w_otd": 0.40,
+            "w_var": 0.35,
+            "w_geo": 0.25
         }
 
     def compute_scorecards(self) -> pd.DataFrame:
         """
         Calculates composite risk score R_s and normalized performance ratings:
-        S_OTD = Historical OTD %
-        S_Qual = max(0, 100 - PPM / 50)
-        R_s = w1*(100 - S_OTD) + w2*(100 - S_Qual) + w3*(VarianceDays * 5) + w4*(FinancialRisk * 20)
+        S_Qual = 0.50 * (1 - DefectPPM / 1,000,000) + 0.50 * (AuditScore / 100)
+        R_s = 0.40*(1 - OTD) + 0.35*(VarianceDays/7) + 0.25*(FinancialRisk/5)
         """
         df_sups = self.loader.supplier_master
         df_scores = self.loader.scorecards
         
         merged = df_sups.merge(df_scores, on="supplier_id", how="left")
         
-        w1 = self.weights["w_otd"]
-        w2 = self.weights["w_qual"]
-        w3 = self.weights["w_var"]
-        w4 = self.weights["w_geo"]
+        w_otd = self.weights["w_otd"]
+        w_var = self.weights["w_var"]
+        w_geo = self.weights["w_geo"]
         
         results = []
         for _, row in merged.iterrows():
-            otd = float(row["historical_otd_pct"])
+            otd_pct = float(row["historical_otd_pct"])
             ppm = float(row["defect_ppm"])
+            audit = float(row["quality_audit_score"])
             var_days = float(row["lead_time_variance_days"])
             fin_risk = float(row["base_financial_risk_score"])
             
-            s_otd = otd
-            s_qual = max(0.0, 100.0 - (ppm / 50.0))
+            # S_Qual formulation from docs
+            s_qual = 0.50 * (1.0 - (ppm / 1000000.0)) + 0.50 * (audit / 100.0)
             
-            # Composite risk index (0 to 100 scale, lower is better)
-            risk_index = (
-                w1 * (100.0 - s_otd) +
-                w2 * (100.0 - s_qual) +
-                w3 * min(100.0, var_days * 5.0 * 2.0) +
-                w4 * min(100.0, fin_risk * 20.0)
+            # Composite risk index from docs (scaled to 100 for continuity)
+            risk_raw = (
+                w_otd * (1.0 - (otd_pct / 100.0)) +
+                w_var * (var_days / 7.0) +
+                w_geo * (fin_risk / 5.0)
             )
-            risk_index = round(max(0.0, min(100.0, risk_index)), 2)
+            # risk_raw is typically 0 to 1, we multiply by 100 to get a 0-100 scale for UI
+            risk_index = round(max(0.0, min(100.0, risk_raw * 100.0)), 2)
             
             # Tier classification
             if risk_index < 15.0:
@@ -73,7 +71,7 @@ class ScorecardEngine:
                 risk_badge = "CRITICAL"
                 
             # Eligibility check
-            eligible = (otd >= 80.0) and (ppm <= 850) and (row["iso_certified"] or fin_risk <= 3.2)
+            eligible = (otd_pct >= 80.0) and (ppm <= 850) and (row["iso_certified"] or fin_risk <= 3.2)
             
             results.append({
                 "supplier_id": row["supplier_id"],
@@ -81,7 +79,7 @@ class ScorecardEngine:
                 "country": row["country"],
                 "tier": row["tier"],
                 "iso_certified": bool(row["iso_certified"]),
-                "historical_otd_pct": otd,
+                "historical_otd_pct": otd_pct,
                 "defect_ppm": int(ppm),
                 "quality_score": round(s_qual, 1),
                 "quality_audit_score": int(row["quality_audit_score"]),

@@ -18,7 +18,7 @@ from .supplier_scorecard_engine import ScorecardEngine
 class SourcingOptimizer:
     """Mixed-Integer Linear Programming multi-supplier procurement allocation engine."""
     
-    def __init__(self, data_loader: DataLoader, risk_lambda: float = 0.05, max_ppm_target: float = 250.0):
+    def __init__(self, data_loader: DataLoader, risk_lambda: float = 0.15, max_ppm_target: float = 250.0):
         self.loader = data_loader
         self.mrp = MRPEngine(data_loader)
         self.scorecards_engine = ScorecardEngine(data_loader)
@@ -196,15 +196,18 @@ class SourcingOptimizer:
                 if enforce_moq and moq_val > 0:
                     prob += total_alloc_sm >= moq_val * y_vars[(s, m)], f"MOQ_{s}_{m}"
 
-            # 3. Contractual Share Allocation Bands (e.g. Max 60% cap per supplier per plant)
+            # 3. Contractual Share Allocation Bands (e.g. Max 60% cap, Min 15% guarantee)
             if enforce_contract_bands:
                 for m, p, req in demand_tuples:
                     sup_for_mat = [s for (s_cand, m_cand) in active_sup_mat if m_cand == m for s in [s_cand] if (s, m, p) in x_vars]
                     if len(sup_for_mat) > 1:
                         for s in sup_for_mat:
+                            min_share = contract_map.get((s, m), {}).get("min_share", 0.15)
                             max_share = contract_map.get((s, m), {}).get("max_share", 0.65)
                             # x_s <= max_share * req
                             prob += x_vars[(s, m, p)] <= (max_share * req) * y_vars[(s, m)], f"MaxShare_{s}_{m}_{p}"
+                            # x_s >= min_share * req * y_s (if selected, must take at least min_share)
+                            prob += x_vars[(s, m, p)] >= (min_share * req) * y_vars[(s, m)], f"MinShare_{s}_{m}_{p}"
 
             # 4. Quality PPM Ceiling Constraint per Material
             for m in needed_materials:

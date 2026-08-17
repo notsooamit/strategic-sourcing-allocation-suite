@@ -104,7 +104,7 @@ class SourcingWorkflowManager:
         # Generate tamper-evident audit ledger with SHA-256 hashes
         audit_trail = []
         for _, row in df_dec.iterrows():
-            payload = f"{row.get('cycle_id')}-{row.get('stage')}-{row.get('decision')}-{row.get('timestamp')}"
+            payload = f"{row.get('cycle_id')}||{row.get('stage')}||{row.get('approved_by')}||{row.get('timestamp')}||{row.get('financial_impact')}"
             audit_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12].upper()
             audit_trail.append({
                 "cycle_id": row.get("cycle_id", "CYC-2026-Q3"),
@@ -156,9 +156,8 @@ class SourcingWorkflowManager:
             "timestamp": now_str
         }
         
-        # Remove any previous pending record for this stage and append approved record
-        df_filtered = df_dec[df_dec["stage"] != stage_id].copy()
-        df_updated = pd.concat([df_filtered, pd.DataFrame([new_record])], ignore_index=True)
+        # Append approved record immutably to the ledger
+        df_updated = pd.concat([df_dec, pd.DataFrame([new_record])], ignore_index=True)
         self.loader.save_decisions(df_updated)
         
         return {
