@@ -299,8 +299,13 @@ class SourcingOptimizer:
         total_demand_req = int(net_df["net_requirement_units"].sum())
         service_level_pct = round((total_allocated_units / max(1, total_demand_req)) * 100, 2)
 
+        # Get actual solver status
+        solver_status = pulp.LpStatus[status].upper()
+        if solver_status == "OPTIMAL" and unmet_demand_total > 0:
+            solver_status = "OPTIMAL_WITH_SHORTAGE"
+
         return {
-            "status": "OPTIMAL" if unmet_demand_total == 0 else "PARTIAL_FEASIBLE",
+            "status": solver_status,
             "solver_name": "PuLP CBC MILP",
             "solve_duration_sec": solve_duration,
             "total_allocated_units": total_allocated_units,
