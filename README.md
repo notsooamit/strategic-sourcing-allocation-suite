@@ -29,25 +29,27 @@ flowchart LR
 ```
 
 1. **Multi-Plant Demand Aggregation & MRP Netting**:
-   - Time-phased Bill of Materials (BOM) explosion incorporating machining scrap ($2\%$ to $8\%$).
-   - Dynamic inventory netting calculating **Inventory Coverage Ratios** ($\frac{\text{OnHand}}{\text{SafetyStock}}$) and **Weeks of Supply (WOS)**.
+   - Time-phased Bill of Materials (BOM) explosion incorporating machining scrap (2% to 8%).
+   - Dynamic inventory netting calculating **Inventory Coverage Ratios** `(On-Hand Stock / Safety Stock)` and **Weeks of Supply (WOS)**.
    - Interactive demand override grid with automatic downstream pipeline reconciliation.
 
 2. **PuLP Mixed-Integer Linear Programming (MILP) Allocation Engine**:
-   - Solves multi-objective linear programming models balancing unit purchase costs, multimodal freight rates, supplier risk penalties ($\lambda_{\text{risk}} = 0.15$), and order setup costs.
-   - Enforces discrete **Minimum Order Quantities (MOQs)** ($x \ge \text{MOQ} \cdot y$), weekly supplier capacity bounds, quality PPM ceilings ($\le 250\text{ PPM}$), and anti-concentration volume bands ($15\%\text{ min} - 60\%\text{ max}$).
+   - Solves multi-objective linear programming models balancing unit purchase costs, multimodal freight rates, supplier risk penalties (λ_risk = 0.15), and order setup costs.
+   - Enforces discrete **Minimum Order Quantities (MOQs)** `(x ≥ MOQ · y)`, weekly supplier capacity bounds, quality PPM ceilings (≤ 250 PPM), and anti-concentration volume bands (15% min to 60% max).
    - Exact lead-time backward PO release date scheduling:
-     $$\text{POReleaseWeek}(s, m, p, t) = t - \left\lceil \frac{\text{LeadTimeDays}_{s,m} + \text{TransitDays}_{s,p}}{7} \right\rceil$$
+     ```
+     POReleaseWeek(s, m, p, t) = t - ceil((LeadTimeDays[s,m] + TransitDays[s,p]) / 7)
+     ```
 
 3. **Pre-PO Predictive Delivery Delay Radar**:
-   - Machine learning logistic sigmoid regression predicting the probability of dock receipt delays exceeding 3 days ($P(\text{Delay} > 3\text{d})$).
+   - Machine learning logistic sigmoid regression predicting the probability of dock receipt delays exceeding 3 days `P(Delay > 3d)`.
    - Evaluates order-to-MOQ ratios, historical supplier delivery variance, and maritime/ground freight lane telemetry to assign `GREEN`, `AMBER`, or `RED` risk tiers with automated split-sourcing recommendations.
 
 4. **Interactive Multi-Supplier Tuning Studio**:
    - Real-time volume sliders with live sub-MOQ violation alerts and dynamic risk/cost recalculation.
 
 5. **Sub-Second What-If Disruption Scenario Simulator**:
-   - Injects macroeconomic shocks in memory (e.g., complete supplier outages $-100\%$, automotive demand spikes $+45\%$, maritime shipping delays $+3\text{ weeks}$, quality PPM purges) and re-optimizes the entire schedule in $<0.10\text{ seconds}$.
+   - Injects macroeconomic shocks in memory (e.g., complete supplier outages -100%, automotive demand spikes +45%, maritime shipping delays +3 weeks, quality PPM purges) and re-optimizes the entire schedule in `< 0.10 seconds`.
 
 6. **5-Stage Strategic Sourcing Governance Cadence & Audit Trail**:
    - Formalized consensus workflow across Plant Materials, Sourcing, Quality Engineering, and Executive Leadership.

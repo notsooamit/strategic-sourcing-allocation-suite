@@ -9,9 +9,9 @@ The **TitanMfg™ Strategic Sourcing Platform** models direct industrial raw mat
 
 - **12-Week Time-Phased Planning Horizon**: Synchronized across fiscal quarters to align with Master Production Schedules (MPS) and multi-plant Material Requirements Planning (MRP).
 - **Direct Industrial Raw Material Specialization**: 40 direct industrial raw materials spanning 8 engineering categories (*Structural Steel, Aluminum Alloys, Polymers & Resins, Electronic Subassemblies, Precision Bearings, Hydraulics, High-Tensile Fasteners, Industrial Composites*).
-- **Certified Supplier-Material Capability Matrices ($\mathcal{C}_{s, m}$)**: In industrial manufacturing, suppliers possess specialized tooling, machinery, and metallurgical certifications. *Not every supplier can supply every material category*. Only certified supplier-material pairs receive procurement allocations.
+- **Certified Supplier-Material Capability Matrices `(C[s, m])`**: In industrial manufacturing, suppliers possess specialized tooling, machinery, and metallurgical certifications. *Not every supplier can supply every material category*. Only certified supplier-material pairs receive procurement allocations.
 - **Multi-Facility Operating Footprint**:
-  - **40 Direct Raw Materials** with safety stock buffers and standard accounting benchmarks ($5.00 to $450.00).
+  - **40 Direct Raw Materials** with safety stock buffers and standard accounting benchmarks ($5.00 to $450.00 USD).
   - **12 Approved Global Suppliers** located in Germany, USA, Japan, South Korea, Mexico, Vietnam, India, and Taiwan.
   - **5 Manufacturing Assembly Hubs** located in Detroit, Munich, Monterrey, Tokyo, and Chennai.
   - **30 Finished Industrial SKU Assemblies** with detailed Bill of Materials (BOM) explosion mappings.

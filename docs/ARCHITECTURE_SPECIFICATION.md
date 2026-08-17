@@ -57,8 +57,8 @@ flowchart TD
 | Layer / Tool | Technology Selected | Alternatives Considered | Technical Justification and Trade-off Analysis |
 |---|---|---|---|
 | **Backend Runtime** | Python 3.10+ Standard Library (`http.server`, `socketserver`, `threading`, `json`) | Node.js / Express, Flask, FastAPI, Django | Zero external dependencies for the web server ensures instant execution across any environment without pip package breakage. Python natively interfaces with computational and mathematical optimization engines. |
-| **Optimization Solver** | PuLP Mixed-Integer Linear Programming (MILP) with CBC Solver | SciPy `linprog`, Gurobi, CPLEX, Heuristics | PuLP natively models discrete integer decision variables ($y \in \{0,1\}$) required for Minimum Order Quantities (MOQs), certified supplier activation, and fixed order costs. CBC solves 150-variable schedules in $<0.10\text{ seconds}$. |
-| **Data Processing Layer** | Pandas In-Memory Vectorized DataFrames | SQLite, PostgreSQL, DuckDB, Polars | Sourcing optimization requires rapid matrix joins between BOMs, capacity limits, and freight rates across 40 materials $\times$ 12 suppliers $\times$ 5 plants. In-memory vectorization executes joins in microsecond intervals. |
+| **Optimization Solver** | PuLP Mixed-Integer Linear Programming (MILP) with CBC Solver | SciPy `linprog`, Gurobi, CPLEX, Heuristics | PuLP natively models discrete integer decision variables (`y ∈ {0, 1}`) required for Minimum Order Quantities (MOQs), certified supplier activation, and fixed order costs. CBC solves 150-variable schedules in `< 0.10 seconds`. |
+| **Data Processing Layer** | Pandas In-Memory Vectorized DataFrames | SQLite, PostgreSQL, DuckDB, Polars | Sourcing optimization requires rapid matrix joins between BOMs, capacity limits, and freight rates across 40 materials × 12 suppliers × 5 plants. In-memory vectorization executes joins in microsecond intervals. |
 | **Client Core** | Vanilla ES6+ JavaScript & HTML5 Semantic Structure | React, Angular, Vue, Next.js | Eliminates heavy node_modules build dependencies, Webpack bundling overhead, and hydration lag. Executes instantaneously with zero build step required. |
 | **Styling & Design System** | Vanilla CSS3 (Custom Design Tokens, Flexbox, CSS Grid, Glassmorphism) | Tailwind CSS, Bootstrap, Material UI | Gives 100% control over design aesthetics (sleek dark mode, custom volume sliders, glowing risk pills, quadrant charts) without CSS purging bugs or framework drift. |
 | **Visualization Layer** | Chart.js (CDN-delivered Canvas rendering) | D3.js, Recharts, Plotly | Canvas-based rendering delivers fluid 60 FPS charts (12-week spend waterfalls, HHI concentration donuts, OTD vs PPM scatter quadrants) with a minimal footprint. |
@@ -71,8 +71,8 @@ flowchart TD
 * **Purpose**: Ingests, validates, joins, and caches all 13 relational CSV datasets.
 * **Key Functions**:
   - `load_all_data() -> Dict[str, pd.DataFrame]`: Reads master, terms, demand, and output datasets into memory.
-  - `get_pricing_lookup_table() -> pd.DataFrame`: Performs inner joins across `supplier_material_pricing`, `supplier_master`, and `material_master`, enforcing the certified capability matrix ($\mathcal{C}_{s,m}$).
-* **Complexity**: $\mathcal{O}(N)$ where $N \le 3,000$ rows (sub-10ms runtime).
+  - `get_pricing_lookup_table() -> pd.DataFrame`: Performs inner joins across `supplier_material_pricing`, `supplier_master`, and `material_master`, enforcing the certified capability matrix (`C[s,m]`).
+* **Complexity**: O(N) where N ≤ 3,000 rows (sub-10ms runtime).
 
 ---
 
@@ -81,10 +81,14 @@ flowchart TD
 * **Key Class**: `MRPEngine`
 * **Mathematical Methods**:
   - `compute_gross_requirements(demand_df, bom_df) -> pd.DataFrame`:
-$$\text{GrossDemand}_{m, p, t} = \sum_{k} \text{AssemblyPlan}_{k, p, t} \times \text{Usage}_{k, m} \times (1 + \text{Scrap}_{k, m})$$
+    ```
+    GrossDemand[m, p, t] = Sum_k ( AssemblyPlan[k, p, t] * Usage[k, m] * (1 + Scrap[k, m]) )
+    ```
   - `compute_net_requirements(gross_df, inventory_df) -> pd.DataFrame`:
-$$\text{NetReq}_{m, p, t} = \max(0, \text{GrossDemand}_{m, p, t} + \text{SafetyStock}_{m, p} - \text{OnHand}_{m, p})$$
-  - `compute_inventory_coverage(inventory_df, gross_df) -> pd.DataFrame`: Calculates Inventory Coverage Ratio ($\frac{\text{OnHand}}{\text{SafetyStock}}$) and Weeks of Supply (WOS).
+    ```
+    NetReq[m, p, t] = max(0, GrossDemand[m, p, t] + SafetyStock[m, p] - OnHand[m, p])
+    ```
+  - `compute_inventory_coverage(inventory_df, gross_df) -> pd.DataFrame`: Calculates Inventory Coverage Ratio `(On-Hand Stock / Safety Stock)` and Weeks of Supply (WOS).
 
 ---
 
@@ -92,7 +96,7 @@ $$\text{NetReq}_{m, p, t} = \max(0, \text{GrossDemand}_{m, p, t} + \text{SafetyS
 * **Purpose**: Computes supplier quality conformance, defect rates, and composite risk indexes.
 * **Key Class**: `SupplierScorecardEngine`
 * **Methods**:
-  - `evaluate_scorecards(scorecards_df) -> pd.DataFrame`: Calculates $S_{\text{Qual}}$ and composite risk index $R_s$, classifying suppliers into `EXCELLENT`, `GOOD`, `MARGINAL`, and `HIGH_RISK`.
+  - `evaluate_scorecards(scorecards_df) -> pd.DataFrame`: Calculates `S_Qual` and composite risk index `R_s`, classifying suppliers into `EXCELLENT`, `GOOD`, `MARGINAL`, and `HIGH_RISK`.
 
 ---
 
@@ -102,12 +106,14 @@ $$\text{NetReq}_{m, p, t} = \max(0, \text{GrossDemand}_{m, p, t} + \text{SafetyS
 * **Methods**:
   - `solve_sourcing_allocation(net_req_df, pricing_df, capacity_df, contracts_df, freight_df) -> pd.DataFrame`: Formulates and executes the MILP optimization model across all 12 weeks.
   - `calculate_lead_time_offset(lead_time_days, transit_days) -> int`: Computes exact backward lead-time scheduling:
-$$\text{POReleaseWeek} = t - \left\lceil \frac{\text{LeadTimeDays} + \text{TransitDays}}{7} \right\rceil$$
+    ```
+    POReleaseWeek = t - ceil( (LeadTimeDays + TransitDays) / 7 )
+    ```
 
 ---
 
 #### 3.5. `engine/predictive_delay_engine.py`
-* **Purpose**: Logistic regression model predicting pre-PO delivery disruption probabilities ($P(\text{Delay} > 3\text{d})$).
+* **Purpose**: Logistic regression model predicting pre-PO delivery disruption probabilities `P(Delay > 3d)`.
 * **Key Class**: `PredictiveDelayEngine`
 * **Methods**:
   - `evaluate_purchase_orders(plan_df, scorecards_df, freight_df) -> pd.DataFrame`: Evaluates delay risk per PO allocation, assigning `GREEN`, `AMBER`, or `RED` status and prescriptive actions.
@@ -118,7 +124,7 @@ $$\text{POReleaseWeek} = t - \left\lceil \frac{\text{LeadTimeDays} + \text{Trans
 * **Purpose**: Calculates 12-week landed spend waterfalls, standard cost variance, and Herfindahl-Hirschman Index (HHI) vendor concentration.
 * **Key Class**: `SpendAnalyticsEngine`
 * **Methods**:
-  - `compute_spend_summary(plan_df) -> Dict`: Generates baseline spend, freight surcharge, negotiated savings, and HHI concentration scores ($HHI = \sum (\text{MarketShare}_s)^2$).
+  - `compute_spend_summary(plan_df) -> Dict`: Generates baseline spend, freight surcharge, negotiated savings, and HHI concentration scores `HHI = Sum( (MarketShare_s)^2 )`.
 
 ---
 
@@ -126,7 +132,7 @@ $$\text{POReleaseWeek} = t - \left\lceil \frac{\text{LeadTimeDays} + \text{Trans
 * **Purpose**: Real-time What-If disruption simulation engine.
 * **Key Class**: `ScenarioSimulator`
 * **Methods**:
-  - `run_disruption_scenario(outage_supplier_id, demand_shock_pct, lead_time_delay_weeks, quality_ceiling_ppm) -> Dict`: Clones baseline state in memory, injects operational shocks, re-executes PuLP solver, and returns delta variances in $<0.10\text{ seconds}$.
+  - `run_disruption_scenario(outage_supplier_id, demand_shock_pct, lead_time_delay_weeks, quality_ceiling_ppm) -> Dict`: Clones baseline state in memory, injects operational shocks, re-executes PuLP solver, and returns delta variances in `< 0.10 seconds`.
 
 ---
 
@@ -149,18 +155,18 @@ The server exposes 13 REST API endpoints over HTTP on port 8000:
 
 | HTTP Method | Endpoint URI | Description & Request/Response Contract |
 |---|---|---|
-| `GET` | `/api/health` | Service health status. Returns `{"status": "ONLINE", "version": "2.4.0", "solver": "PuLP CBC"}`. |
-| `GET` | `/api/dashboard` | Executive Cockpit summary KPIs (`total_spend_usd`, `contract_savings_usd`, `avg_otd_pct`, `hhi_concentration_index`, `high_risk_delay_count`). |
-| `GET` | `/api/materials` | Master catalog of 40 direct industrial raw materials with standard benchmark pricing. |
+| `GET` | `/api/health` | Service health status. Returns `{"status": "ONLINE", "version": "2.4.0", "system": "StrategicSourcingPlatform"}` |
+| `GET` | `/api/dashboard` | Executive Cockpit summary KPIs (`total_spend_usd`, `contract_savings_usd`, `hhi_index`, `high_risk_spend_pct`) |
+| `GET` | `/api/materials` | Master catalog of 40 direct industrial raw materials with standard benchmark costs and usage categories. |
 | `GET` | `/api/suppliers` | Approved vendor master roster with country, tier, and financial risk profiles. |
 | `GET` | `/api/plants` | Assembly manufacturing hubs with location and assembly capacity limits. |
-| `GET` | `/api/scorecards` | Supplier performance matrix (OTD %, Defect PPM, Audit Scores, Composite Risk). |
-| `GET` | `/api/procurement/plan` | PuLP-optimized 12-week purchase order schedule with backward PO release dates. |
-| `POST`| `/api/procurement/split-sourcing` | Executes real-time manual slider volume split and validates contract MOQs. |
+| `GET` | `/api/scorecards` | Supplier performance matrix (OTD %, Defect PPM, Audit Scores, Composite Risk Index `R_s`). |
+| `GET` | `/api/procurement/plan` | PuLP-optimized 12-week purchase order schedule with backward PO release calendar dates. |
+| `POST`| `/api/procurement/split-sourcing` | Executes real-time manual slider volume split and validates MOQ constraints. |
 | `GET` | `/api/delays/predictive`| Pre-PO delivery delay risk predictions and contingency recommendations. |
 | `GET` | `/api/demand` | 12-week time-phased MRP gross demand and net requirements across 5 plants. |
-| `POST`| `/api/demand/override` | Overrides plant raw material requirements and re-runs downstream MRP netting. |
-| `POST`| `/api/scenario/run` | Executes high-speed What-If disruption simulation. Body: `{"outage_supplier_id": "SUP_001", "demand_shock_pct": 25.0, ...}`. |
+| `POST`| `/api/demand/override` | Overrides plant raw material requirements and re-runs downstream solver pipeline. |
+| `POST`| `/api/scenario/run` | Executes high-speed What-If disruption simulation. Body: `{"outage_supplier_id", "demand_shock_pct", "lead_time_delay_weeks", "quality_ceiling_ppm"}` |
 | `GET` | `/api/spend/analytics`| 12-week landed spend waterfall breakdown and category cost allocations. |
 | `GET` | `/api/sourcing/cycle` | Active 5-stage sourcing cadence progress and cryptographic audit ledger. |
 | `POST`| `/api/sourcing/decide` | Records signed-off governance stage decision with SHA-256 audit hash. |
@@ -172,17 +178,16 @@ The server exposes 13 REST API endpoints over HTTP on port 8000:
 
 ```mermaid
 flowchart LR
-    A[Role Selection Landing Portal: loginAs role] --> B[RBAC Filter: applyPersonaPermissions]
-    B --> C[View Switcher: switchView]
-    
-    C --> D1[Robert Sterling - CPO: view-cockpit, view-simulator, view-governance]
-    C --> D2[Marcus Vance - Sourcing Lead: view-allocation, view-delay-radar, view-simulator, view-governance]
-    C --> D3[David Miller - Plant Buyer: view-demand-mrp, view-governance + PO EDI Release]
-    C --> D4[Dr. Aris Thorne - Quality Lead: view-scorecards, view-delay-radar, view-governance]
+A[Role Selection Landing Portal: loginAs role] --> B[RBAC Filter: applyPersonaPermissions]
+B --> C[View Switcher: switchView]
+
+C --> D1[Robert Sterling - CPO: view-cockpit, view-simulator, view-governance]
+C --> D2[Marcus Vance - Sourcing Lead: view-allocation, view-delay-radar, view-simulator, view-governance]
+C --> D3[David Miller - Plant Buyer: view-demand-mrp, view-governance + PO EDI Release]
+C --> D4[Dr. Aris Thorne - Quality Lead: view-scorecards, view-delay-radar, view-governance]
 ```
 
 #### 5.1. Strict Persona Workspace Isolation
-- **Authentication**: Role selection occurs on `#login-screen`. Role switching inside an active session is disallowed without clicking **Logout**.
-- **Dynamic Sidebar Filtering**: Sidebar navigation elements with `data-roles` are dynamically filtered based on `PERSONAS[role].allowedViews`. Unauthorized modules are hidden from DOM.
-- **Header Profile Pill**: Displays a single, clean user profile badge (`👤 Name | Role`) with an active logout button.
-- **Zero-Cache Delivery**: The backend injects `Cache-Control: no-store, no-cache, must-revalidate` headers on all responses, ensuring instantaneous client updates.
+- **Authentication**: Role selection occurs on `#login-screen`. Role switching inside an active session updates global state and filters navigation.
+- **Dynamic Sidebar Filtering**: Sidebar navigation elements with `data-roles` are dynamically filtered based on active role credentials.
+- **View Security Guards**: If a user navigates to an unauthorized view, the router redirects them to their default authorized dashboard with an access alert notification.
