@@ -1,0 +1,8 @@
+cycle_id,stage,owner_role,decision,financial_impact,risk_impact,status,approved_by,timestamp
+CYC-2026-Q3,STAGE_1_DEMAND_AGGREGATION,plant_buyer,Global 12-Week Plant Demand Master Schedule aggregated and locked across 5 assembly hubs.,0.0,0.0,APPROVED,David Miller (Plant Buyer Lead),2026-08-01 09:30:00
+CYC-2026-Q3,STAGE_2_SUPPLIER_SCORECARD,quality_lead,"Supplier OTD telemetry and PPM defect audits completed. 10 approved vendors certified, 2 marked High Risk.",0.0,-14.2,APPROVED,Dr. Aris Thorne (Quality Assurance Lead),2026-08-03 14:15:00
+CYC-2026-Q3,STAGE_4_PREDICTIVE_DELAY_REVIEW,sourcing_lead,Pre-PO predictive transit delay audit completed. High-risk maritime lanes rebalanced with nearshore suppliers.,18200.0,-35.8,APPROVED,Marcus Vance (Category Sourcing Lead),2026-08-07 16:45:00
+CYC-2026-Q3,STAGE_5_EXECUTIVE_AWARD,executive,Executive Sourcing Committee final award ratified. $4.85M quarterly PO releases approved for SAP ERP dispatch.,-512000.0,-28.0,PENDING_FINAL_SIGN_OFF,Robert Sterling (Chief Procurement Officer),2026-08-10 10:00:00
+CYC-2026-Q3,STAGE_3_MILP_OPTIMIZATION,sourcing_lead,Automated test validation sign-off,-480000.0,-22.0,APPROVED,Marcus Vance (Test Lead),2026-08-17 20:40:05
+CYC-2026-Q3,STAGE_3_MILP_OPTIMIZATION,sourcing_lead,Automated test validation sign-off,-480000.0,-22.0,APPROVED,Marcus Vance (Test Lead),2026-08-17 20:49:24
+CYC-2026-Q3,STAGE_3_MILP_OPTIMIZATION,sourcing_lead,Automated test validation sign-off,-480000.0,-22.0,APPROVED,Marcus Vance (Test Lead),2026-08-17 20:59:31

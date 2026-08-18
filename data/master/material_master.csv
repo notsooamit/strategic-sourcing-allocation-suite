@@ -1,0 +1,41 @@
+material_id,material_name,category,unit_of_measure,standard_cost_usd,criticality
+MAT_001,High-Tensile Structural Steel I-Beam,Structural Steel,kg,18.41,MEDIUM
+MAT_002,Cold-Rolled Carbon Steel Sheet 2mm,Structural Steel,kg,8.89,MEDIUM
+MAT_003,Austenitic Stainless Steel 316L Plate,Structural Steel,kg,12.76,LOW
+MAT_004,Galvanized Structural Angle Steel,Structural Steel,kg,11.96,MEDIUM
+MAT_005,Hardox 450 Wear-Resistant Steel,Structural Steel,kg,19.92,MEDIUM
+MAT_006,Aerospace Grade 7075-T6 Billet,Aluminum Alloys,kg,37.01,LOW
+MAT_007,Structural Aluminum 6061-T6 Extrusion,Aluminum Alloys,kg,44.33,MEDIUM
+MAT_008,Marine Grade 5083-H116 Plate,Aluminum Alloys,kg,16.96,MEDIUM
+MAT_009,Die-Cast Aluminum A380 Ingot,Aluminum Alloys,kg,28.35,LOW
+MAT_010,Alloy 2024-T3 Precision Sheet,Aluminum Alloys,kg,15.01,MEDIUM
+MAT_011,Engineered Polyamide PA66-GF30 Resin,Polymers & Resins,kg,11.68,MEDIUM
+MAT_012,High-Density Polyethylene HDPE Copolymer,Polymers & Resins,kg,19.14,LOW
+MAT_013,Polycarbonate Optical-Grade Pellets,Polymers & Resins,kg,6.69,MEDIUM
+MAT_014,Polyether Ether Ketone PEEK Polymer,Polymers & Resins,kg,11.17,MEDIUM
+MAT_015,Thermoplastic Polyurethane TPU Elastomer,Polymers & Resins,kg,22.9,LOW
+MAT_016,Quad-Core Embedded Controller SoC,Electronic Subassemblies,units,227.56,HIGH
+MAT_017,Industrial Power Management Module,Electronic Subassemblies,units,118.85,MEDIUM
+MAT_018,Multi-Layer High-Frequency PCB Array,Electronic Subassemblies,units,242.4,HIGH
+MAT_019,Precision MEMS IMU Sensor Package,Electronic Subassemblies,units,316.16,MEDIUM
+MAT_020,Fiber-Optic Gigabit Transceiver Subassembly,Electronic Subassemblies,units,47.18,HIGH
+MAT_021,Angular Contact Spindle Bearing 7008,Precision Bearings,units,120.34,LOW
+MAT_022,Double-Row Tapered Roller Bearing,Precision Bearings,units,106.66,MEDIUM
+MAT_023,Deep-Groove Ceramic Hybrid Bearing,Precision Bearings,units,61.21,MEDIUM
+MAT_024,Sealed Spherical Roller Bearing 22210,Precision Bearings,units,37.75,LOW
+MAT_025,High-Speed Miniature Precision Bearing,Precision Bearings,units,139.57,MEDIUM
+MAT_026,Proportional Electro-Hydraulic Valve,Hydraulics,units,194.59,HIGH
+MAT_027,Double-Acting Heavy Cylinder 3000 PSI,Hydraulics,units,100.71,LOW
+MAT_028,Variable Displacement Piston Pump Core,Hydraulics,units,102.24,HIGH
+MAT_029,Reinforced High-Pressure Flex Hose Assembly,Hydraulics,units,391.29,MEDIUM
+MAT_030,Servo-Controlled Hydraulic Actuator,Hydraulics,units,297.43,HIGH
+MAT_031,Grade 12.9 Structural Flange Hex Bolt,High-Tensile Fasteners,units,15.16,MEDIUM
+MAT_032,Aerospace Grade Titanium Locknut,High-Tensile Fasteners,units,13.82,MEDIUM
+MAT_033,Stainless Steel A4-80 Socket Cap Screw,High-Tensile Fasteners,units,10.48,LOW
+MAT_034,Hardened Belleville Spring Washers,High-Tensile Fasteners,units,18.03,MEDIUM
+MAT_035,Structural Monobolt Blind Rivet Pack,High-Tensile Fasteners,units,7.75,MEDIUM
+MAT_036,Toray Carbon Fiber Prepreg 3K Twill,Industrial Composites,meters,137.13,HIGH
+MAT_037,Structural S-Glass Woven Roving Mat,Industrial Composites,meters,188.44,MEDIUM
+MAT_038,Nomex Honeycomb Structural Core 1/8,Industrial Composites,meters,149.43,HIGH
+MAT_039,Basalt Fiber High-Temp Insulation Roll,Industrial Composites,meters,194.42,LOW
+MAT_040,High-Modulus Epoxy Resin Infusion Matrix,Industrial Composites,meters,141.81,HIGH

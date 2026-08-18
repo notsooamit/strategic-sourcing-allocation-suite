@@ -28,6 +28,7 @@ def migrate_to_sqlite():
         "supplier_capacity_limits": os.path.join(data_dir, "suppliers", "supplier_capacity_limits.csv"),
         "supplier_scorecards": os.path.join(data_dir, "suppliers", "supplier_scorecards.csv"),
         "contract_commitments": os.path.join(data_dir, "suppliers", "contract_commitments.csv"),
+        "supplier_certification": os.path.join(data_dir, "suppliers", "supplier_certification.csv"),
         
         "plant_material_demand": os.path.join(data_dir, "demand", "plant_material_demand.csv"),
         "current_inventory": os.path.join(data_dir, "demand", "current_inventory.csv"),
