@@ -8,6 +8,8 @@
 """
 
 import math
+import os
+import joblib
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional
@@ -35,6 +37,13 @@ class PredictiveDelayEngine:
         self.b_geo = beta_geo
         self.active_disruption = False
         self.expedited_pos = set()
+        
+        # Load ML model
+        model_path = os.path.join(os.path.dirname(__file__), 'delay_model.pkl')
+        if os.path.exists(model_path):
+            self.model = joblib.load(model_path)
+        else:
+            self.model = None
 
     def evaluate_allocations(self, allocations_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -101,18 +110,28 @@ class PredictiveDelayEngine:
                 lane_rel -= 30.0
                 geo_risk += 2.0
                 
-            # Logistic logit from spec: z = b0 + b1*(1-OTD) + b2*Var + b3*Transit + b4*(1-LaneRel) + b5*(Order/MOQ)
-            # These are manually configured prototype coefficients calibrated to represent business risk.
-            z = (
-                self.b0 +
-                1.5 * (1.0 - (otd / 100.0)) +
-                self.b_var * var_days +
-                0.05 * transit_days +
-                2.0 * (1.0 - (lane_rel / 100.0)) +
-                self.b_size * order_ratio
-            )
-            
-            p_delay_gt_3 = 1.0 / (1.0 + math.exp(-z))
+            if self.model is not None:
+                # Use trained ML Model
+                features = pd.DataFrame([{
+                    'otd': otd,
+                    'var_days': var_days,
+                    'transit_days': transit_days,
+                    'lane_rel': lane_rel,
+                    'order_ratio': order_ratio
+                }])
+                p_delay_gt_3 = float(self.model.predict_proba(features)[0, 1])
+            else:
+                # Fallback to hardcoded prototype coefficients
+                z = (
+                    self.b0 +
+                    1.5 * (1.0 - (otd / 100.0)) +
+                    self.b_var * var_days +
+                    0.05 * transit_days +
+                    2.0 * (1.0 - (lane_rel / 100.0)) +
+                    self.b_size * order_ratio
+                )
+                p_delay_gt_3 = 1.0 / (1.0 + math.exp(-z))
+                
             p_delay_pct = round(p_delay_gt_3 * 100.0, 1)
             
             if p_delay_pct < 25.0:
