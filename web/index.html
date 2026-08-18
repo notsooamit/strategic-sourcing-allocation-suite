@@ -105,11 +105,11 @@
           </div>
           <h3 class="persona-name">David Miller</h3>
           <span class="persona-title">Plant Materials Operations Buyer</span>
-          <p class="persona-desc">Multi-plant demand aggregation, BOM time-phased netting, inventory coverage ratios, and 1-click PO release to EDI/ERP.</p>
+          <p class="persona-desc">Multi-plant demand aggregation, MRP time-phased netting, inventory coverage ratios, and SIMULATED DEMO RELEASE to EDI/ERP.</p>
           <div class="persona-modules-list">
-            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Demand & MRP BOM Netting</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> Demand & MRP Netting</span>
             <span><i data-lucide="check" class="icon-xs text-emerald"></i> Inventory Weeks of Supply</span>
-            <span><i data-lucide="check" class="icon-xs text-emerald"></i> 1-Click PO Release to EDI</span>
+            <span><i data-lucide="check" class="icon-xs text-emerald"></i> SIMULATED DEMO RELEASE</span>
           </div>
           <button class="btn-login-action btn-emerald w-full">
             <span>Log In as Plant Buyer</span>
@@ -386,7 +386,7 @@
               <div class="panel-header">
                 <div class="panel-title-wrap">
                   <i data-lucide="donut" class="icon-sm text-indigo"></i>
-                  <h3>Supplier Volume Share (HHI Concentration)</h3>
+                  <h3>Supplier Spend Share — HHI Concentration</h3>
                 </div>
                 <span class="badge-pill">12 Approved Suppliers</span>
               </div>
@@ -527,7 +527,7 @@
                     <th>Unit Price</th>
                     <th>Freight</th>
                     <th>Total Landed Cost</th>
-                    <th>PO Release</th>
+                    <th>PO Release (Simulation)</th>
                     <th>MOQ Status</th>
                   </tr>
                 </thead>
@@ -546,12 +546,9 @@
           <div class="view-header">
             <div>
               <h1 class="view-title">Pre-PO Predictive Delivery Delay Radar</h1>
-              <p class="view-desc">Machine-assisted pre-release risk scoring classifying shipment delay probabilities based on supplier backlog load, transit variance, and geopolitical risk factors.</p>
+              <p class="view-desc">Machine-assisted pre-release delay risk scoring using supplier OTD, lead-time variance, transit duration, lane reliability and order-size exposure.</p>
             </div>
             <div class="view-actions flex gap-2">
-              <button class="btn-secondary-glow btn-sm" id="btn-simulate-disruption">
-                <i data-lucide="siren" class="icon-xs"></i> Simulate Transit Disruption
-              </button>
               <button class="btn-primary-glow btn-sm" id="btn-trigger-split-sourcing">
                 <i data-lucide="shield-check" class="icon-xs"></i> Execute Split-Sourcing Contingency Rebalance
               </button>
@@ -565,7 +562,7 @@
                 <i data-lucide="check-circle" class="kpi-icon text-emerald"></i>
               </div>
               <div class="kpi-content">
-                <span class="kpi-label">Low Delay Risk (P ≤ 15%)</span>
+                <span class="kpi-label">Low Delay Risk (P < 25%)</span>
                 <div class="kpi-value text-emerald" id="radar-count-green">0 Orders</div>
                 <div class="kpi-subtext text-slate">Direct PO Dispatch Approved</div>
               </div>
@@ -576,7 +573,7 @@
                 <i data-lucide="alert-triangle" class="kpi-icon text-amber"></i>
               </div>
               <div class="kpi-content">
-                <span class="kpi-label">Moderate Delay Risk (15% < P ≤ 35%)</span>
+                <span class="kpi-label">Moderate Delay Risk (25% ≤ P ≤ 50%)</span>
                 <div class="kpi-value text-amber" id="radar-count-amber">0 Orders</div>
                 <div class="kpi-subtext text-slate">Expedited Transit Buffer Required</div>
               </div>
@@ -587,7 +584,7 @@
                 <i data-lucide="alert-octagon" class="kpi-icon text-rose"></i>
               </div>
               <div class="kpi-content">
-                <span class="kpi-label">High Delay Risk (P > 35%)</span>
+                <span class="kpi-label">High Delay Risk (P > 50%)</span>
                 <div class="kpi-value text-rose" id="radar-count-red">0 Orders</div>
                 <div class="kpi-subtext text-rose">Split-Sourcing Contingency Required</div>
               </div>
@@ -620,7 +617,7 @@
                     <th>Destination Plant</th>
                     <th>Period</th>
                     <th>Volume</th>
-                    <th>Backlog Load</th>
+                    <th>Capacity Utilization</th>
                     <th>Transit Variance</th>
                     <th>P(Delay) %</th>
                     <th>Risk Category</th>
@@ -706,7 +703,8 @@
           <div class="view-header">
             <div>
               <h1 class="view-title">Plant Material Demand Aggregation & MRP Netting</h1>
-              <p class="view-desc">Time-phased Bill of Materials (BOM) explosion, weeks of supply, and inventory netting across 5 assembly plants.</p>
+              <p class="view-desc">Time-phased Material Demand & MRP Netting, weeks of supply, and inventory coverage across 5 assembly plants.</p>
+              <p class="view-desc" style="font-size: 0.85rem; color: #a0aec0; margin-top: 0.5rem;"><em>Note: Net requirement currently uses on-hand inventory and safety stock; scheduled receipts are supported by the business design but are not populated in the prototype dataset.</em></p>
             </div>
           </div>
 
@@ -804,7 +802,7 @@
                   🚢 Maritime Congestion (+3 Wks)
                 </button>
                 <button class="btn-scenario-preset" data-preset="quality_purge">
-                  🛡️ Quality Purge (PPM ≤ 200)
+                  🔴 Quality Purge
                 </button>
               </div>
 
@@ -904,12 +902,12 @@
             </div>
           </div>
 
-          <!-- Immutable Decision Audit Ledger Table -->
+          <!-- SHA-256 Audit Decision Ledger Table -->
           <div class="glass-panel card-panel">
             <div class="panel-header">
               <div class="panel-title-wrap">
-                <i data-lucide="lock" class="icon-sm text-cyan"></i>
-                <h3>Tamper-Evident Sourcing Decision Ledger</h3>
+                <i data-lucide="shield" class="icon-sm text-cyan"></i>
+                <h3>SHA-256 Audit Decision Ledger</h3>
               </div>
               <span class="badge-pill">SHA-256 Checksums</span>
             </div>
@@ -1018,7 +1016,7 @@
             <i data-lucide="copy" class="icon-xs"></i> Copy Summary
           </button>
           <button class="btn-primary-glow" id="btn-confirm-release-edi">
-            <i data-lucide="check" class="icon-xs"></i> Confirm & Release POs to EDI
+            <i data-lucide="check" class="icon-xs"></i> Simulate PO Release (Demo)
           </button>
         </div>
       </div>

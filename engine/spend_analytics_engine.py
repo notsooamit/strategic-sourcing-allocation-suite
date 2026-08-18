@@ -3,6 +3,10 @@ Spend Analytics & Concentration Risk Engine
 
 Calculates total procurement spend, landed cost waterfalls, savings realized,
 and supplier market concentration (Herfindahl-Hirschman Index - HHI).
+
+Note: HHI is calculated here strictly as a post-optimization executive diagnostic KPI 
+to measure concentration risk. It is NOT utilized as an allocation constraint within 
+the MILP optimizer (the optimizer relies on contractual share bands instead).
 """
 
 import pandas as pd
@@ -21,6 +25,8 @@ class SpendEngine:
     def analyze_spend(self, allocations_df: pd.DataFrame) -> Dict[str, Any]:
         """
         Comprehensive spend analysis on solved procurement allocations.
+        Calculates post-optimization metrics like total spend, cost waterfalls, 
+        and HHI concentration (which serves as a reporting KPI, not a solver constraint).
         """
         if allocations_df.empty:
             return {

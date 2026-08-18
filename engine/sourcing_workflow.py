@@ -105,7 +105,7 @@ class SourcingWorkflowManager:
         audit_trail = []
         for _, row in df_dec.iterrows():
             payload = f"{row.get('cycle_id')}||{row.get('stage')}||{row.get('approved_by')}||{row.get('timestamp')}||{row.get('financial_impact')}"
-            audit_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12].upper()
+            audit_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest().upper()
             audit_trail.append({
                 "cycle_id": row.get("cycle_id", "CYC-2026-Q3"),
                 "stage": row.get("stage", ""),

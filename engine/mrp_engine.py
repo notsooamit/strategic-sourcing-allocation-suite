@@ -21,8 +21,14 @@ class MRPEngine:
         Calculates Net Requirements for each material, plant, and week:
         NetReq = max(0, GrossReq + SafetyStock - OnHand - ScheduledReceipts)
         
+        NOTE: The business specification includes '- ScheduledReceipts' (In-Transit inventory).
+        However, the current relational database schema and CSV datasets (e.g., current_inventory, 
+        plant_material_demand) lack any tables or columns for open POs or in-transit receipts. 
+        Therefore, this calculation relies solely on OnHand inventory. Data fabrication has been 
+        explicitly avoided to maintain prototype integrity.
+
         Also calculates:
-        InventoryCoverageRatio = ((OnHand + Receipts) / (GrossReq + SafetyStock)) * 100
+        InventoryCoverageRatio = (OnHand / (GrossReq + SafetyStock)) * 100
         WeeksOfSupply = OnHand / AverageWeeklyDemand
         """
         if demand_df is None:

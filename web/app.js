@@ -178,6 +178,17 @@ function setupNavigation() {
       switchView(targetView);
     });
   });
+
+  const btnReopt = document.getElementById("btn-reoptimize");
+  if (btnReopt) {
+    btnReopt.addEventListener("click", async () => {
+      btnReopt.classList.add("animate-spin");
+      await apiPost("/api/pipeline/run", {});
+      await refreshAllData();
+      btnReopt.classList.remove("animate-spin");
+      alert("✅ PuLP MILP Solver successfully re-optimized all 12-week material allocations!");
+    });
+  }
 }
 
 function switchView(viewId) {
@@ -209,6 +220,38 @@ function switchView(viewId) {
 
   initLucideIcons();
 }
+function showToast(message, type = "error") {
+  const existing = document.getElementById("demo-toast-container");
+  if (!existing) {
+    const container = document.createElement("div");
+    container.id = "demo-toast-container";
+    container.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.style.cssText = `background:${type === 'error' ? '#ef4444' : '#10b981'};color:white;padding:12px 20px;border-radius:6px;box-shadow:0 4px 6px rgba(0,0,0,0.3);font-size:14px;animation:slideIn 0.3s ease-out;`;
+  toast.innerText = message;
+  document.getElementById("demo-toast-container").appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+async function withLoadingState(buttonEl, loadingText, actionFn) {
+  if (!buttonEl) return;
+  const originalHtml = buttonEl.innerHTML;
+  buttonEl.disabled = true;
+  buttonEl.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> ${loadingText}`;
+  initLucideIcons();
+  try {
+    await actionFn();
+  } catch (err) {
+    showToast(`Action failed: ${err.message}`);
+  } finally {
+    buttonEl.disabled = false;
+    buttonEl.innerHTML = originalHtml;
+    initLucideIcons();
+  }
+}
+
 async function apiGet(endpoint) {
   try {
     const res = await fetch(`${STATE.apiBase}${endpoint}`, { cache: "no-store" });
@@ -216,6 +259,7 @@ async function apiGet(endpoint) {
     return await res.json();
   } catch (err) {
     console.error(`[API GET ERROR] ${endpoint}:`, err);
+    showToast(`Network request failed for ${endpoint}. Existing data retained.`);
     return null;
   }
 }
@@ -232,6 +276,7 @@ async function apiPost(endpoint, body) {
     return await res.json();
   } catch (err) {
     console.error(`[API POST ERROR] ${endpoint}:`, err);
+    showToast(`Operation failed on ${endpoint}. Existing data retained.`);
     return null;
   }
 }
@@ -321,53 +366,7 @@ function showEngineStatus(text) {
   if (el) el.textContent = text;
 }
 
-// ============================================================================
-// View Navigation
-// ============================================================================
-function setupNavigation() {
-  const navItems = document.querySelectorAll(".nav-item");
-  navItems.forEach(item => {
-    item.addEventListener("click", (e) => {
-      e.preventDefault();
-      const targetView = item.getAttribute("data-view");
-      switchView(targetView);
-    });
-  });
-
-  const btnReopt = document.getElementById("btn-reoptimize");
-  if (btnReopt) {
-    btnReopt.addEventListener("click", async () => {
-      btnReopt.classList.add("animate-spin");
-      await apiPost("/api/pipeline/run", {});
-      await refreshAllData();
-      btnReopt.classList.remove("animate-spin");
-      alert("✅ PuLP MILP Solver successfully re-optimized all 12-week material allocations!");
-    });
-  }
-}
-
-function switchView(viewId) {
-  STATE.activeView = viewId;
-  
-  document.querySelectorAll(".nav-item").forEach(item => {
-    if (item.getAttribute("data-view") === viewId) {
-      item.classList.add("active");
-    } else {
-      item.classList.remove("active");
-    }
-  });
-
-  document.querySelectorAll(".view-panel").forEach(panel => {
-    if (panel.id === viewId) {
-      panel.classList.add("active");
-    } else {
-      panel.classList.remove("active");
-    }
-  });
-
-  initLucideIcons();
-}
-
+// Duplicate removed
 // ============================================================================
 // VIEW 1: Dashboard KPIs & Charts
 // ============================================================================
@@ -649,7 +648,7 @@ function setupTuningStudioEvents() {
       const plantId = STATE.tuning.plantId;
       const week = STATE.tuning.week;
       
-      const sliders = document.querySelectorAll(".range-slider");
+      const sliders = document.querySelectorAll("#vendor-sliders-list .range-slider");
       sliders.forEach(slider => {
         const supId = slider.getAttribute("data-sup");
         const val = parseInt(slider.value);
@@ -725,9 +724,14 @@ function renderTuningStudio() {
   );
 
   // Find approved suppliers (Only show suppliers who are contracted for this specific material)
-  const eligibleSupIds = STATE.pricing ? STATE.pricing.filter(p => p.material_id === matId).map(p => p.supplier_id) : [];
+  const eligiblePricing = STATE.pricing ? STATE.pricing.filter(p => p.material_id === matId) : [];
+  const eligibleSupIds = eligiblePricing.map(p => p.supplier_id);
   
-  let approvedSups = STATE.scorecards.filter(s => eligibleSupIds.includes(s.supplier_id));
+  // Filter by scorecards and eligibility (must be eligible and certified for the material)
+  let approvedSups = STATE.scorecards.filter(s => 
+      eligibleSupIds.includes(s.supplier_id) && 
+      s.is_eligible === true
+  );
   
   // If no pricing data loaded yet, fallback to all scorecards safely, but sort by allocated
   if (approvedSups.length === 0 && STATE.scorecards) {
@@ -742,7 +746,10 @@ function renderTuningStudio() {
     const alloc = allocs.find(a => a.supplier_id === sup.supplier_id);
     const initUnits = alloc ? alloc.allocated_units : 0;
     const initPct = netReq > 0 ? Math.round((initUnits / netReq) * 100) : 0;
-    const moq = 500; // Standard MOQ threshold
+    
+    // Get canonical MOQ from pricing dataset
+    const pricingMatch = eligiblePricing.find(p => p.supplier_id === sup.supplier_id);
+    const moq = pricingMatch && pricingMatch.moq_units ? pricingMatch.moq_units : 0;
 
     const hasViolation = initUnits > 0 && initUnits < moq;
 
@@ -860,11 +867,11 @@ function renderDelayRadar() {
       }
       else if (row.risk_tier === "RED") {
         riskBadge = `<span class="badge-status badge-red">RED (${row.delay_probability_pct}%)</span>`;
-        actionBtn = `<button class="btn-primary-glow btn-sm btn-split" onclick="alert('✅ Executing 35% Split-Sourcing Contingency for ${row.po_id}...')">Split-Source 35%</button>`;
+        actionBtn = `<button class="btn-primary-glow btn-sm btn-split" data-po="${row.po_id}">Split-Source 35%</button>`;
       }
 
       return `
-        <tr>
+        <tr data-risk="${row.risk_tier}">
           <td class="font-mono text-slate text-xs">${row.po_id}</td>
           <td><strong>${row.material_name}</strong></td>
           <td>${row.supplier_name}</td>
@@ -900,36 +907,40 @@ function renderDelayRadar() {
       e.target.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Expediting...`;
       e.target.disabled = true;
       await apiPost("/api/delays/expedite", { po_id: po_id });
-      alert(`✅ Expedited Transit Buffer Applied!\n\n${po_id} has been reprioritized for fast-track shipping. Delay probability has been artificially reduced. Re-running ML models now.`);
+      alert(`🟢 Transit parameters updated.\n\n${po_id} has been reprioritized for fast-track shipping. Delay probability recalculated using expedited-lane assumptions. Re-running ML models now.`);
       await refreshAllData();
     });
   });
 
-  // Setup disruption simulation
-  const btnDisrupt = document.getElementById("btn-simulate-disruption");
-  if (btnDisrupt) {
-    const newBtn = btnDisrupt.cloneNode(true);
-    btnDisrupt.parentNode.replaceChild(newBtn, btnDisrupt);
-    newBtn.addEventListener("click", async () => {
-      newBtn.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Simulating...`;
-      await apiPost("/api/delays/simulate_disruption", {});
-      alert("🚨 GLOBAL TRANSIT DISRUPTION SIMULATED 🚨\n\nMajor port closures and geopolitical instability injected into the model. Delay probabilities across the network have spiked.");
-      await refreshAllData();
-      newBtn.innerHTML = `<i data-lucide="siren" class="icon-xs"></i> Simulate Transit Disruption`;
-      initLucideIcons();
-    });
-  }
-  const btnSplit = document.getElementById("btn-trigger-split-sourcing");
-  if (btnSplit) {
-    btnSplit.onclick = async () => {
+  // Setup Row-Level Split-Source Buttons
+  document.querySelectorAll('.btn-split').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const po_id = e.target.dataset.po;
+      if (!po_id) return;
+      e.target.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Rebalancing...`;
+      e.target.disabled = true;
       const res = await apiPost("/api/procurement/split-sourcing", { user: STATE.activePersona });
       if (res && res.shifts_count > 0) {
-        alert(`✅ Split-Sourcing Contingency Applied!\n\nIdentified ${res.shifts_count} high-risk (RED) orders. Automatically stripped ${res.shifted_volume_units.toLocaleString()} units from struggling suppliers and re-allocated them to certified backup suppliers.\n\nMILP Network Rebalanced.`);
+        alert(`🟢 ${res.message}`);
         await refreshAllData();
       } else {
-        alert("✅ Network is already balanced. No high-risk allocations require contingency transfer.");
+        alert("🟢 Network is already balanced. No high-risk allocations require contingency transfer.");
       }
-    };
+    });
+  });
+  const btnSplit = document.getElementById("btn-trigger-split-sourcing");
+  if (btnSplit) {
+    btnSplit.addEventListener('click', () => {
+      withLoadingState(btnSplit, "Rebalancing...", async () => {
+        const res = await apiPost("/api/procurement/split-sourcing", { user: STATE.activePersona });
+        if (res && res.shifts_count > 0) {
+          alert(`🟢 ${res.message}`);
+          await refreshAllData();
+        } else {
+          alert("🟢 Network is already balanced. No high-risk allocations require contingency transfer.");
+        }
+      });
+    });
   }
 }
 
@@ -1045,7 +1056,7 @@ function renderDemandNetting() {
 
   tbody.innerHTML = d.net_requirements.slice(0, 50).map(row => {
     return `
-      <tr>
+      <tr data-plant="${row.plant_id}" data-mat="${row.material_id}">
         <td class="font-mono">${row.period_week}</td>
         <td class="font-mono text-cyan">${row.material_id}</td>
         <td><strong>${row.material_name}</strong></td>
@@ -1138,6 +1149,7 @@ function setupSimulatorEvents() {
         sliderLT.value = 3;
         valLT.textContent = "+3 Wks";
       } else if (preset === "quality_purge") {
+        // Reset cap slider so we don't accidentally do a capacity shutdown
         sliderCap.value = 0;
         valCap.textContent = "0%";
       }
@@ -1146,32 +1158,32 @@ function setupSimulatorEvents() {
 
   const btnRun = document.getElementById("btn-run-simulation");
   if (btnRun) {
-    btnRun.addEventListener("click", async () => {
-      btnRun.disabled = true;
-      btnRun.innerHTML = `<i data-lucide="loader" class="icon-xs animate-spin"></i> Simulating MILP...`;
+    btnRun.addEventListener("click", () => {
+      withLoadingState(btnRun, "Simulating MILP...", async () => {
+        const targetSup = document.getElementById("select-sim-supplier").value;
+        const capCutVal = parseInt(sliderCap.value);
+        const capMult = { [targetSup]: (100 - capCutVal) / 100.0 };
+        const demandSurge = parseFloat(sliderDemand.value);
+        const ltDelay = parseInt(sliderLT.value);
 
-      const targetSup = document.getElementById("select-sim-supplier").value;
-      const capCutVal = parseInt(sliderCap.value);
-      const capMult = { [targetSup]: (100 - capCutVal) / 100.0 };
-      const demandSurge = parseFloat(sliderDemand.value);
-      const ltDelay = parseInt(sliderLT.value);
+        const payload = {
+          scenario_name: `Stress Test (Cap -${capCutVal}%, Surge +${demandSurge}%, Delay +${ltDelay}w)`,
+          supplier_capacity_cuts: capCutVal > 0 ? capMult : {},
+          demand_surge_pct: demandSurge,
+          lead_time_delay_weeks: ltDelay,
+          user: STATE.activePersona
+        };
 
-      const payload = {
-        scenario_name: `Stress Test (Cap -${capCutVal}%, Surge +${demandSurge}%, Delay +${ltDelay}w)`,
-        supplier_capacity_cuts: capCutVal > 0 ? capMult : {},
-        demand_surge_pct: demandSurge,
-        lead_time_delay_weeks: ltDelay,
-        user: STATE.activePersona
-      };
+        if (capCutVal === 0 && demandSurge === 0 && ltDelay === 0) {
+            payload.scenario_name = "Quality Purge Stress Test";
+            payload.max_ppm_threshold = 150.0; 
+        }
 
-      const res = await apiPost("/api/scenario/run", payload);
-      btnRun.disabled = false;
-      btnRun.innerHTML = `<i data-lucide="play" class="icon-xs"></i> Execute Stress-Test Simulation`;
-      initLucideIcons();
-
-      if (res) {
-        renderSimulationResults(res);
-      }
+        const res = await apiPost("/api/scenario/run", payload);
+        if (res) {
+          renderSimulationResults(res);
+        }
+      });
     });
   }
 
@@ -1339,7 +1351,7 @@ function setupModals() {
 
   if (btnConfirmEDI && modalPO) {
     btnConfirmEDI.addEventListener("click", () => {
-      alert("✅ Generating EDI 850 payload...\n\nAll Purchase Orders successfully formatted and queued for dispatch to SAP/Oracle ERP and EDI Supplier Network!");
+      alert("🟢 Simulated PO Release Payload Generated...\n\nAll Purchase Orders successfully formatted for demonstration purposes (no actual EDI transmission sent).");
       modalPO.classList.remove("open");
     });
   }
@@ -1465,11 +1477,11 @@ function setupFilterEvents() {
   const delayFilter = document.getElementById("filter-delay-risk");
   if (delayFilter) {
     delayFilter.addEventListener("change", (e) => {
-      const val = e.target.value.toLowerCase();
+      const val = e.target.value.toUpperCase();
       const rows = document.querySelectorAll("#tbody-delay-radar tr");
       rows.forEach(r => {
-        if (val === "all") r.style.display = "";
-        else r.style.display = r.innerHTML.toLowerCase().includes(val) ? "" : "none";
+        if (val === "ALL") r.style.display = "";
+        else r.style.display = r.getAttribute("data-risk") === val ? "" : "none";
       });
     });
   }
@@ -1482,8 +1494,8 @@ function setupFilterEvents() {
     const rows = document.querySelectorAll("#tbody-mrp-netting tr");
     rows.forEach(r => {
       let show = true;
-      if (plantVal !== "ALL" && !r.innerHTML.includes(plantVal)) show = false;
-      if (matVal !== "ALL" && !r.innerHTML.includes(matVal)) show = false;
+      if (plantVal !== "ALL" && r.getAttribute("data-plant") !== plantVal) show = false;
+      if (matVal !== "ALL" && r.getAttribute("data-mat") !== matVal) show = false;
       if (q && !r.textContent.toLowerCase().includes(q)) show = false;
       r.style.display = show ? "" : "none";
     });

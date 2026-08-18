@@ -83,6 +83,11 @@ class DataLoader:
                     "delay_probability", "risk_category", "recommended_action"
                 ])
                 
+            try:
+                self._cache["supplier_certification"] = pd.read_sql("SELECT * FROM supplier_certification", conn)
+            except Exception:
+                self._cache["supplier_certification"] = pd.DataFrame(columns=["supplier_id", "material_id", "certified"])
+                
         conn.close()
 
     # Accessor properties
@@ -140,6 +145,11 @@ class DataLoader:
     def freight(self) -> pd.DataFrame:
         with self._lock:
             return self._cache["freight_lane_matrix"].copy()
+            
+    @property
+    def certification(self) -> pd.DataFrame:
+        with self._lock:
+            return self._cache.get("supplier_certification", pd.DataFrame()).copy()
 
     @property
     def optimized_plan(self) -> pd.DataFrame:

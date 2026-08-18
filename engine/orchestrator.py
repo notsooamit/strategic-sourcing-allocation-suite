@@ -142,7 +142,8 @@ class SourcingOrchestrator:
                 "cycle_current_stage": cycle["current_stage"]["title"],
                 "total_suppliers_active": len(spend["by_supplier"]),
                 "materials_count": len(self.data_loader.material_master),
-                "plants_count": len(self.data_loader.plant_master)
+                "plants_count": len(self.data_loader.plant_master),
+                "max_ppm_target": self.optimizer.max_ppm_target
             }
 
     def get_demand_data(self) -> Dict[str, Any]:
@@ -264,21 +265,50 @@ class SourcingOrchestrator:
         """Applies split-sourcing contingency to rebalance high-risk allocations."""
         with self._lock:
             alloc_df = self.data_loader.optimized_plan
-            res = self.predictive_delay_engine.get_split_sourcing_contingency(alloc_df)
+            contingency_req = self.predictive_delay_engine.get_split_sourcing_contingency(alloc_df)
+            caps = contingency_req.get("max_allocation_caps", {})
+            target_shifts = contingency_req.get("target_shifts_count", 0)
             
-            if res["shifts_count"] > 0:
-                self.data_loader.save_optimized_plan(res["rebalanced_allocations_df"])
-                self._cached_optimization_result["allocations_df"] = res["rebalanced_allocations_df"]
-                self.predictive_delay_engine.evaluate_allocations(res["rebalanced_allocations_df"])
-                self._cached_spend_result = self.spend_engine.analyze_spend(res["rebalanced_allocations_df"])
+            if target_shifts > 0:
+                # Run the pipeline with the maximum allocation caps on high risk suppliers
+                pipe_res = self.run_full_pipeline(max_allocation_caps=caps)
                 
+                # Analyze the new allocations to see if we successfully hit the 35% targets
+                new_alloc_df = self._cached_optimization_result["allocations_df"]
+                actual_shifted_vol = 0
+                actual_shifts = 0
+                
+                # Compare new allocation against the caps to verify feasibility
+                for _, row in new_alloc_df.iterrows():
+                    key = f"{row['supplier_id']}_{row['material_id']}_{row['plant_id']}_{row['period_week']}"
+                    if key in caps:
+                        # Original units was caps[key] / 0.65
+                        orig_units = caps[key] / 0.65
+                        actual_shifted = orig_units - row["allocated_units"]
+                        actual_shifted_vol += actual_shifted
+                        actual_shifts += 1
+                        
+                # Determine if it was fully unconstrained or constrained
+                if abs(actual_shifted_vol - contingency_req["target_shifted_volume"]) < 5:
+                    status = "SUCCESS"
+                    msg = f"Executed split-sourcing rebalancing: transferred {int(actual_shifted_vol):,} units across {actual_shifts} high-risk orders to certified backup suppliers."
+                else:
+                    status = "CONSTRAINED CONTINGENCY"
+                    msg = f"Executed constrained split-sourcing: transferred {int(actual_shifted_vol):,} units (Target was {contingency_req['target_shifted_volume']:,}). Exact 35% could not be achieved due to MOQ/Capacity/Quality constraints."
+                    
                 self.log_activity(
                     user=user,
                     action="SPLIT_SOURCING_REBALANCE",
-                    details=f"Executed split-sourcing rebalancing: transferred {res['shifted_volume_units']:,} units across {res['shifts_count']} high-risk orders to certified backup suppliers."
+                    details=msg
                 )
                 
-            return res
+                return {
+                    "shifts_count": actual_shifts,
+                    "shifted_volume_units": int(actual_shifted_vol),
+                    "status": status,
+                    "message": msg
+                }
+            return {"shifts_count": 0, "shifted_volume_units": 0, "status": "NO_HIGH_RISK_ORDERS", "message": "No RED risk orders required contingency."}
 
     def run_scenario(self, payload: Dict[str, Any], user: str = "Sourcing Lead") -> Dict[str, Any]:
         """Executes a What-If scenario simulation."""

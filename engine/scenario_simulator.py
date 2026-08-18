@@ -28,7 +28,7 @@ class ScenarioSimulator:
         demand_surge_pct: float = 0.0, # e.g. +45.0%
         target_plants: List[str] = None, # e.g. ["PLANT_01"] or None for all
         lead_time_delay_weeks: int = 0, # e.g. +3 weeks
-        max_ppm_threshold: Optional[float] = None # e.g. 300 PPM
+        max_ppm_threshold: Optional[float] = 150.0 # e.g. Quality Purge
     ) -> Dict[str, Any]:
         """
         Executes a What-If scenario and calculates exact deltas against the baseline plan.

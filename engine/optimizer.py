@@ -33,7 +33,8 @@ class SourcingOptimizer:
         banned_suppliers: List[str] = None,
         enforce_moq: bool = True,
         enforce_contract_bands: bool = True,
-        manual_tuning_constraints: Dict[str, float] = None
+        manual_tuning_constraints: Dict[str, float] = None,
+        max_allocation_caps: Optional[Dict[str, int]] = None
     ) -> Dict[str, Any]:
         """
         Executes the PuLP MILP solver across all materials, plants, and planning weeks.
@@ -59,6 +60,7 @@ class SourcingOptimizer:
         df_capacity = self.loader.capacity
         df_contracts = self.loader.contracts
         df_freight = self.loader.freight
+        df_cert = self.loader.certification
         scorecards_dict = self.scorecards_engine.get_scorecard_dict()
         
         banned_sups = set(banned_suppliers or [])
@@ -100,6 +102,11 @@ class SourcingOptimizer:
             mult = cap_mult.get(sup_id, 1.0)
             capacity_map[(sup_id, r["material_id"], r["period_week"])] = float(r["max_weekly_capacity_units"]) * max(0.0, mult)
 
+        # certification: (sup, mat) -> bool
+        cert_map = {}
+        for _, r in df_cert.iterrows():
+            cert_map[(r["supplier_id"], r["material_id"])] = bool(int(r["certified"]))
+
         # Standard material costs for savings calculation
         std_cost_map = dict(zip(self.loader.material_master["material_id"], self.loader.material_master["standard_cost_usd"]))
 
@@ -139,6 +146,17 @@ class SourcingOptimizer:
             active_sup_mat = []
             for (s, m), p_info in pricing_map.items():
                 if m in needed_materials:
+                    # 1. Certification Check (C[s,m] == 1)
+                    if not cert_map.get((s, m), False):
+                        continue
+                        
+                    # 2. Quality Audit and OTD Check (Business Rule)
+                    sup_score = scorecards_dict.get(s, {})
+                    if sup_score.get("quality_audit_score", 0) < 85:
+                        continue
+                    if sup_score.get("historical_otd_pct", 0) < 80.0:
+                        continue
+                        
                     active_sup_mat.append((s, m))
                     y_vars[(s, m)] = pulp.LpVariable(f"y_{s}_{m}", cat=pulp.LpBinary)
                     for _, p, _ in [dt for dt in demand_tuples if dt[0] == m]:
@@ -156,8 +174,13 @@ class SourcingOptimizer:
                 freight_p = freight_map.get((s, p), {}).get("cost", 1.50)
                 risk_score = scorecards_dict.get(s, {}).get("composite_risk_index", 20.0)
                 
+                # Math: scale risk index to 0-1
+                risk_index_0_1 = risk_score / 100.0
+                std_cost = std_cost_map.get(m, unit_p)
+                risk_penalty_per_unit = self.risk_lambda * risk_index_0_1 * std_cost
+                
                 # Landed cost coefficient = Base Price + Freight + Risk Penalty
-                cost_coeff = unit_p + freight_p + (self.risk_lambda * risk_score)
+                cost_coeff = unit_p + freight_p + risk_penalty_per_unit
                 obj_terms.append(cost_coeff * x_var)
                 
             # 2. Transaction / Order Setup Overhead ($150 per supplier-material batch)
@@ -204,7 +227,7 @@ class SourcingOptimizer:
                     if len(sup_for_mat) > 1:
                         for s in sup_for_mat:
                             min_share = contract_map.get((s, m), {}).get("min_share", 0.15)
-                            max_share = contract_map.get((s, m), {}).get("max_share", 0.65)
+                            max_share = contract_map.get((s, m), {}).get("max_share", 0.60)
                             # x_s <= max_share * req
                             prob += x_vars[(s, m, p)] <= (max_share * req) * y_vars[(s, m)], f"MaxShare_{s}_{m}_{p}"
                             # x_s >= min_share * req * y_s (if selected, must take at least min_share)
@@ -215,12 +238,14 @@ class SourcingOptimizer:
                 for (s, m, p), x_var in x_vars.items():
                     key = f"{s}_{m}_{p}_{w}"
                     if key in manual_tuning_constraints:
-                        target_pct = manual_tuning_constraints[key] / 100.0
-                        # Find req for this m, p
-                        req = next((r for m_cand, p_cand, r in demand_tuples if m_cand == m and p_cand == p), 0)
-                        if req > 0:
-                            target_vol = int(round(target_pct * req))
-                            prob += x_var == target_vol, f"ManualTuning_{s}_{m}_{p}"
+                        prob += x_vars[(s, m, p)] == manual_tuning_constraints[key], f"ManualTuning_{key}"
+                        
+            # 3.6 Max Allocation Caps (for split-sourcing contingency)
+            if max_allocation_caps:
+                for (s, m, p), x_var in x_vars.items():
+                    key = f"{s}_{m}_{p}_{w}"
+                    if key in max_allocation_caps:
+                        prob += x_vars[(s, m, p)] <= max_allocation_caps[key], f"MaxAllocCap_{key}"
 
             # 4. Quality PPM Ceiling Constraint per Material
             for m in needed_materials:
@@ -243,10 +268,20 @@ class SourcingOptimizer:
                 if alloc_qty > 0.001:
                     unit_p = pricing_map[(s, m)]["price"]
                     freight_p = freight_map.get((s, p), {}).get("cost", 1.50)
-                    landed_cost = (unit_p + freight_p) * alloc_qty
+                    risk_score = scorecards_dict.get(s, {}).get("composite_risk_index", 20.0)
+                    risk_penalty = self.risk_lambda * risk_score
+                    
+                    procurement_cost = unit_p * alloc_qty
+                    freight_cost = freight_p * alloc_qty
+                    landed_cost = procurement_cost + freight_cost
+                    risk_penalty_cost = risk_penalty_per_unit * alloc_qty
+                    risk_adjusted_objective_cost = landed_cost + risk_penalty_cost
+                    
                     moq_req = pricing_map[(s, m)]["moq"]
                     # Exact Lead-Time Backward Scheduling:
                     # OffsetWeeks = ceil((LeadTimeWeeks*7 + TransitDays) / 7) + DelayWeeks
+                    # Note: Lead time affects the recommended PO release week for scheduling, 
+                    # but is NOT currently fully modeled as a time-phased capacity constraint inside the MILP.
                     lt_m_weeks = pricing_map[(s, m)]["lead_time"]
                     transit_days = freight_map.get((s, p), {}).get("transit_days", 7)
                     total_transit_offset_weeks = int(math.ceil((lt_m_weeks * 7 + transit_days) / 7.0)) + lead_time_delay_weeks
@@ -267,7 +302,11 @@ class SourcingOptimizer:
                         "allocated_units": int(round(alloc_qty)),
                         "unit_price_usd": unit_p,
                         "freight_cost_per_unit_usd": freight_p,
+                        "procurement_cost_usd": round(procurement_cost, 2),
+                        "freight_cost_usd": round(freight_cost, 2),
                         "landed_cost_usd": round(landed_cost, 2),
+                        "risk_penalty_usd": round(risk_penalty_cost, 2),
+                        "risk_adjusted_objective_cost_usd": round(risk_adjusted_objective_cost, 2),
                         "standard_cost_usd": std_cost_map.get(m, unit_p),
                         "po_release_week": po_week_str,
                         "expected_delivery_week": w,
@@ -286,6 +325,11 @@ class SourcingOptimizer:
         # Calculate summary financials
         total_allocated_units = int(df_alloc["allocated_units"].sum()) if not df_alloc.empty else 0
         total_landed_cost = float(df_alloc["landed_cost_usd"].sum()) if not df_alloc.empty else 0.0
+        
+        total_procurement_cost = df_alloc["procurement_cost_usd"].sum() if not df_alloc.empty else 0.0
+        total_freight_cost = df_alloc["freight_cost_usd"].sum() if not df_alloc.empty else 0.0
+        total_risk_penalty = df_alloc["risk_penalty_usd"].sum() if not df_alloc.empty else 0.0
+        total_risk_adjusted_cost = df_alloc["risk_adjusted_objective_cost_usd"].sum() if not df_alloc.empty else 0.0
         
         # Standard baseline benchmark cost
         baseline_cost = sum(
@@ -312,7 +356,11 @@ class SourcingOptimizer:
             "total_net_demand_units": total_demand_req,
             "unmet_demand_units": int(unmet_demand_total),
             "service_level_pct": service_level_pct,
+            "total_procurement_cost_usd": round(total_procurement_cost, 2),
+            "total_freight_cost_usd": round(total_freight_cost, 2),
             "total_landed_cost_usd": round(total_landed_cost, 2),
+            "total_risk_penalty_usd": round(total_risk_penalty, 2),
+            "total_risk_adjusted_objective_cost_usd": round(total_risk_adjusted_cost, 2),
             "baseline_standard_cost_usd": round(baseline_cost, 2),
             "cost_savings_realized_usd": savings_usd,
             "cost_savings_pct": savings_pct,

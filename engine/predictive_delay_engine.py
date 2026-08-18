@@ -1,9 +1,10 @@
 """
-Pre-PO Predictive Delivery Delay Probability Engine
-
-Calculates shipment delay probabilities prior to Purchase Order dispatch using
-supplier backlog capacity loading, lead-time variance telemetry, and geopolitical risk factors.
-Provides automatic split-sourcing contingency recommendations.
+    Prototype Predictive Delay Engine
+    
+    Evaluates risk of supply chain delivery delays exceeding 3 days using a calibrated logistic model.
+    Note: The coefficients used here are prototype/calibrated values for the demonstration, 
+    not generated from a historical machine learning training pipeline.
+    Provides automatic split-sourcing contingency recommendations.
 """
 
 import math
@@ -101,7 +102,7 @@ class PredictiveDelayEngine:
                 geo_risk += 2.0
                 
             # Logistic logit from spec: z = b0 + b1*(1-OTD) + b2*Var + b3*Transit + b4*(1-LaneRel) + b5*(Order/MOQ)
-            # Using mapped variables: b_util corresponds to b1, b_geo to b4, etc. for backward compat
+            # These are manually configured prototype coefficients calibrated to represent business risk.
             z = (
                 self.b0 +
                 1.5 * (1.0 - (otd / 100.0)) +
@@ -111,23 +112,22 @@ class PredictiveDelayEngine:
                 self.b_size * order_ratio
             )
             
-            p_delay = 1.0 / (1.0 + math.exp(-z))
-            p_delay_pct = round(p_delay * 100.0, 1)
+            p_delay_gt_3 = 1.0 / (1.0 + math.exp(-z))
+            p_delay_pct = round(p_delay_gt_3 * 100.0, 1)
             
-            # Classification
-            if p_delay_pct <= 15.0:
+            if p_delay_pct < 25.0:
                 risk_tier = "GREEN"
-                status_label = "Low Delay Risk (<= 15%)"
+                status_label = "Low Delay Risk (< 25%)"
                 recommended_action = "Direct PO Release Approved"
                 split_needed = False
-            elif p_delay_pct <= 35.0:
+            elif p_delay_pct <= 50.0:
                 risk_tier = "AMBER"
-                status_label = "Moderate Delay Risk (15-35%)"
+                status_label = "Moderate Delay Risk (25-50%)"
                 recommended_action = "Expedited Transit Buffer Required"
                 split_needed = False
             else:
                 risk_tier = "RED"
-                status_label = "High Delay Risk (> 35%)"
+                status_label = "High Delay Risk (> 50%)"
                 recommended_action = "Split-Sourcing Contingency Required"
                 split_needed = True
                 
@@ -157,18 +157,15 @@ class PredictiveDelayEngine:
 
     def get_split_sourcing_contingency(self, allocations_df: pd.DataFrame) -> Dict[str, Any]:
         """
-        Identifies high-risk orders and formulates a rebalanced split-sourcing contingency plan.
-        Transfers 35% of volume from high-risk suppliers to backup certified suppliers.
+        Identifies high-risk orders and formulates a max-allocation cap constraint
+        to force the MILP to re-allocate 35% of the volume from high-risk suppliers.
         """
         evaluated = self.evaluate_allocations(allocations_df)
         if evaluated.empty:
-            return {"rebalanced_allocations": allocations_df, "shifts_count": 0, "shifted_volume": 0}
+            return {"max_allocation_caps": {}, "target_shifts_count": 0, "target_shifted_volume": 0}
             
-        df_pricing = self.loader.pricing
-        scorecards_dict = self.scorecards.get_scorecard_dict()
-        
-        rebalanced_rows = []
-        total_shifted_vol = 0
+        caps = {}
+        target_shifted_vol = 0
         shifts_count = 0
         
         for _, row in allocations_df.iterrows():
@@ -187,57 +184,16 @@ class PredictiveDelayEngine:
             ]
             
             if not match.empty and match.iloc[0]["risk_tier"] == "RED" and units > 500:
-                # Find alternative approved suppliers for this material
-                alt_sups = df_pricing[
-                    (df_pricing["material_id"] == m_id) &
-                    (df_pricing["supplier_id"] != s_id)
-                ]["supplier_id"].tolist()
+                shift_units = int(units * 0.35)
+                remain_units = units - shift_units
+                target_shifted_vol += shift_units
+                shifts_count += 1
                 
-                # Pick backup with lowest composite risk
-                best_backup = None
-                lowest_risk = 999.0
-                for alt_s in alt_sups:
-                    alt_risk = scorecards_dict.get(alt_s, {}).get("composite_risk_index", 50.0)
-                    if alt_risk < lowest_risk:
-                        lowest_risk = alt_risk
-                        best_backup = alt_s
-                        
-                if best_backup:
-                    shift_units = int(units * 0.35)
-                    remain_units = units - shift_units
-                    total_shifted_vol += shift_units
-                    shifts_count += 1
-                    
-                    # Primary supplier reduced allocation
-                    p1_row = dict(row)
-                    p1_row["allocated_units"] = remain_units
-                    p1_row["landed_cost_usd"] = round(p1_row["landed_cost_usd"] * (remain_units / units), 2)
-                    rebalanced_rows.append(p1_row)
-                    
-                    # Secondary supplier contingency allocation
-                    alt_pricing_row = df_pricing[
-                        (df_pricing["material_id"] == m_id) &
-                        (df_pricing["supplier_id"] == best_backup)
-                    ].iloc[0]
-                    alt_unit_price = float(alt_pricing_row["unit_price_usd"])
-                    alt_lt = int(alt_pricing_row["standard_lead_time_weeks"])
-                    
-                    p2_row = dict(row)
-                    p2_row["supplier_id"] = best_backup
-                    p2_row["supplier_name"] = scorecards_dict.get(best_backup, {}).get("supplier_name", best_backup)
-                    p2_row["allocated_units"] = shift_units
-                    p2_row["unit_price_usd"] = alt_unit_price
-                    p2_row["landed_cost_usd"] = round((alt_unit_price + float(row["freight_cost_per_unit_usd"])) * shift_units, 2)
-                    p2_row["lead_time_weeks"] = alt_lt
-                    rebalanced_rows.append(p2_row)
-                    continue
-                    
-            rebalanced_rows.append(dict(row))
-            
-        df_rebalanced = pd.DataFrame(rebalanced_rows)
+                key = f"{s_id}_{m_id}_{p_id}_{week}"
+                caps[key] = remain_units
+                
         return {
-            "rebalanced_allocations_df": df_rebalanced,
-            "shifts_count": shifts_count,
-            "shifted_volume_units": total_shifted_vol,
-            "status": "CONTINGENCY_BUFFER_APPLIED"
+            "max_allocation_caps": caps, 
+            "target_shifts_count": shifts_count, 
+            "target_shifted_volume": target_shifted_vol
         }

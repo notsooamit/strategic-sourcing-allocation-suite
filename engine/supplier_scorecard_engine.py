@@ -70,8 +70,9 @@ class ScorecardEngine:
                 tier_rating = "HIGH_RISK"
                 risk_badge = "CRITICAL"
                 
-            # Eligibility check
-            eligible = (otd_pct >= 80.0) and (ppm <= 850) and (row["iso_certified"] or fin_risk <= 3.2)
+            # Eligibility check (Aligned with optimizer rules)
+            # Note: PPM is intentionally excluded here so the MILP can handle it as a weighted portfolio constraint.
+            eligible = (otd_pct >= 80.0) and (int(row["quality_audit_score"]) >= 85)
             
             results.append({
                 "supplier_id": row["supplier_id"],
